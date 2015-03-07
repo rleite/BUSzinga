@@ -1,0 +1,19 @@
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+.rl-main-view {
+    overflow: hidden;
+    margin: 0 auto;
+    max-width: 1080px;
+}
+
+.rl-main-view .title{
+    text-align: center;
+}
+
+.rl-main-view .rl-loader{
+    margin: 0 auto;
+    padding: 200px 0;
+}

@@ -1,14 +1,16 @@
-angular.module('metro1000Eyes')
+angular.module('BUSzinga')
     // CONTROLLER
-    .controller('MainView', ['Nextbus', function (bus) {
+    .controller('MainView', ['VehiclesService', 'RoutesService', function (vehicles, routes) {
         'use strict';
         var self = this;
-        self.vehicles = [];
 
-        bus.getVehicleLocations().then(function (vehicles) {
-            self.vehicles = vehicles;
+        routes.getRoutes().then(function (routes) {
+            vehicles.getVehicles().then(function (vehicles) {
+                self.vehicles = vehicles.slice(0, 5);
+                self.routes = routes.slice(0, 5);
+                self.ready = true;
+            });
         });
-
     }])
 
     // Directive

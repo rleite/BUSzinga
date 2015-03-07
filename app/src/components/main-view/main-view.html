@@ -1,5 +1,14 @@
-<h1>Wellcome to San Francisco Nextbus!</h1>
+<section class="rl-main-view">
+    <h1 class="title">Wellcome to San Francisco <span class="">BUS</span>zinga!</h1>
 
-<ul ng-if="ctrl.vehicles.length">
-    <li ng-repeat="vehicle in ctrl.vehicles" ng-bind="vehicle | json"></li>
-</ul>
+    <div rl-map></div>
+    <div rl-loader ng-if="!mainView.ready"></div>
+
+    <div class="body" ng-if="mainView.ready">
+        <ul>
+            <li ng-repeat="route in mainView.routes">{{route.tag}}</li>
+            <li ng-if="mainView.vehicles && mainView.routes"><hr/></li>
+            <li ng-repeat="vehicle in mainView.vehicles">{{vehicle.id}}</li>
+        </ul>
+    </div>
+</section>

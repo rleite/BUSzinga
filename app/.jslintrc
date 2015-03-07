@@ -1,0 +1,20 @@
+{
+    "ass": true,
+    "bitwise": true,
+    "browser": true,
+    "indent": 4,
+    "maxerr": 0,
+    "maxlen": 120,
+    "node": true,
+    "nomen": true,
+    "plusplus": true,
+    "regexp": true,
+    "stupid": true,
+    "sub": true,
+    "vars": true,
+    "todo": true,
+    "predef": [
+        "angular",
+        "d3"
+    ]
+}

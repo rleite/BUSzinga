@@ -1,4 +1,4 @@
-angular.module('metro1000Eyes')
+angular.module('BUSzinga')
     .constant('NEXTBUS.CONF', {
         url: 'http://webservices.nextbus.com/service/publicXMLFeed'
     })
@@ -7,7 +7,6 @@ angular.module('metro1000Eyes')
 
         function makeRequest(params) {
             params = params || {};
-            params.t = params.t || Date.now();
             params.a = params.a || 'sf-muni';
 
             return $http({
@@ -21,6 +20,8 @@ angular.module('metro1000Eyes')
         function getRouteConfig() {
             return makeRequest({
                 command: 'routeConfig'
+            }).then(function (data) {
+                return data.route;
             });
         }
 

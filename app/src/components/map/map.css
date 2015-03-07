@@ -1,0 +1,8 @@
+.rl-map {
+    background-color: #888;
+}
+
+.rl-map .street {
+    stroke-width: 2;
+    stroke: black;
+}

@@ -1,19 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Metro 1000 Eyes - Thousandeyes Challenge</title>
+	<title>BUSzinga - San Francisco BUS Track</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" type="text/css" href="src/components/main-view/main-view.css">
+    <link rel="stylesheet" type="text/css" href="src/components/loader/loader.css">
+    <link rel="stylesheet" type="text/css" href="src/components/map/map.css">
 </head>
-<body ng-app="metro1000Eyes">
+<body ng-app="BUSzinga">
 
     <main rl-main-view></main>
 
     <!-- vendor -->
     <script type="text/javascript" src="vendor/xml2json/xml2json.js"></script>
-	<script type="text/javascript" src="vendor/angular/angular.js"></script>
+    <script type="text/javascript" src="vendor/d3/d3.js"></script>
+	<script type="text/javascript" src="vendor/angularjs/angular.js"></script>
     <!-- app -->
 	<script type="text/javascript" src="src/app.js"></script>
+    <script type="text/javascript" src="src/core/routes-service.js"></script>
     <script type="text/javascript" src="src/core/nextbus-service.js"></script>
+    <script type="text/javascript" src="src/core/vehicles-service.js"></script>
+    <script type="text/javascript" src="src/core/store-service.js"></script>
+    <script type="text/javascript" src="src/core/toolkit-service.js"></script>
+    <script type="text/javascript" src="src/core/streets-service.js"></script>
+
+    <script type="text/javascript" src="src/core/models/models.js"></script>
+
     <script type="text/javascript" src="src/components/main-view/main-view.js"></script>
+    <script type="text/javascript" src="src/components/loader/loader.js"></script>
+    <script type="text/javascript" src="src/components/map/map.js"></script>
 
 </body>
 </html>
