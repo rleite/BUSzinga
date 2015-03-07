@@ -4,9 +4,10 @@ html, body {
 }
 
 .rl-main-view {
+    position: fixed;
     overflow: hidden;
-    margin: 0 auto;
-    max-width: 1080px;
+    width: 100%;
+    height: 100%;
 }
 
 .rl-main-view .title{

@@ -1,19 +1,19 @@
 angular.module('BUSzinga').factory('Point', ['Store', function (Store) {
     'use strict';
 
-    function Point(lat, lon, ignoreMaxMin) {
+    function Point(lat, lon, setMaxMin) {
         this.lat = Number(lat);
         this.lon = Number(lon);
-        if (!ignoreMaxMin) {
+        if (setMaxMin) {
             this.setMaxMin();
         }
     }
 
     Point.prototype.setMaxMin = function () {
         var minPoint = Store.get('pointEdges', 'min') ||
-                Store.register('pointEdges', 'min', new Point(this.lat, this.lon, true));
+                Store.register('pointEdges', 'min', new Point(this.lat, this.lon));
         var maxPoint = Store.get('pointEdges', 'max') ||
-                Store.register('pointEdges', 'max', new Point(this.lat, this.lon, true));
+                Store.register('pointEdges', 'max', new Point(this.lat, this.lon));
 
         // update max
         minPoint.lat = this.lat < minPoint.lat ? this.lat : minPoint.lat;
@@ -107,10 +107,6 @@ angular.module('BUSzinga').factory('Vehicle', ['Point', 'Store', function (Point
 angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
     'use strict';
     function Street(street) {
-        this.path = street.geometry.coordinates.map(function (cord) {
-            return new Point(cord[0], cord[1]);
-        });
-
         this.accepted = street.properties.ACCEPTED;
         this.classcode = street.properties.CLASSCODE;
         this.cnn = street.properties.CNN;
@@ -130,6 +126,10 @@ angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
         this.stType = street.properties.ST_TYPE;
         this.tNodeCnn = street.properties.T_NODE_CNN;
         this.zipCode = street.properties.ZIP_CODE;
+
+        this.path = street.geometry.coordinates.map(function (cord) {
+            return new Point(cord[0], cord[1], true);
+        });
     }
     return Street;
 }]);
