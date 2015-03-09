@@ -1,46 +1,77 @@
 angular.module('BUSzinga').controller('rlMap', [
-    'StreetsService', 'Point', 'Store',
-    function (Streets, Point, Store) {
+    '$q', 'StreetsService', 'VehiclesService', 'Point', 'Store',
+    function ($q, Streets, Vehicles, Point, Store) {
         'use strict';
         var self = this;
 
-        self.minScale = 200;
-        self.maxScale = 3000;
-        // init scale as 10%
-        self.scale = self.minScale + ((self.maxScale - self.minScale) * 0.10);
+        var vehivlesPromise;
+
+        var minRadios = 320;
+        var maxRadios = 20000;
+
+        self.zoom = minRadios;
+        self.drawRadios = maxRadios;
+        self.center = { x: 0, y: 0 };
 
         function incrementScale(inc) {
-            var update = self.scale + inc;
-            update = update > self.minScale ? update : self.minScale;
-            update = update < self.maxScale ? update : self.maxScale;
-            self.scale = update;
+            var update = self.zoom + inc;
+            update = update > minRadios ? update : minRadios;
+            update = update < maxRadios ? update : maxRadios;
+            self.zoom = update;
         }
 
-        function getScaleRate() {
-            var normScale = self.scale - self.minScale;
-            var normMax = self.maxScale - self.minScale;
-            return normScale / normMax;
+        function getScale() {
+            var normScale = self.zoom - minRadios;
+            var normMax = maxRadios - minRadios;
+            var scale = normScale / normMax;
+            var minZoomScale = minRadios / maxRadios;
+            return minZoomScale + (scale * (1 - minZoomScale));
         }
 
-        function setLimits() {
-            self.limits = [
-                {
-                    point1: self.minPoint,
-                    point2: new Point(self.minPoint.lat, self.maxPoint.lon)
-                }, {
-                    point1: self.minPoint,
-                    point2: new Point(self.maxPoint.lat, self.minPoint.lon)
-                }, {
-                    point1: new Point(self.maxPoint.lat, self.minPoint.lon),
-                    point2: self.maxPoint
-                }, {
-                    point1: new Point(self.minPoint.lat, self.maxPoint.lon),
-                    point2: self.maxPoint
-                }
+        function calcMove(move, size) {
+            var scale = getScale();
+            var limit = (maxRadios * scale) - ((size / 2) * (1 - scale));
+            limit = limit > 0 ? limit : 0;
+
+            var flag;
+            var scaledMove = move * scale;
+            if (move < 0) {
+                limit *= -1;
+                flag = scaledMove > limit;
+            } else {
+                flag = scaledMove < limit;
+            }
+
+            return flag ? move : limit / scale;
+        }
+
+        function move(x, y, width, height) {
+            var scale = getScale();
+
+            self.center.x = calcMove(self.center.x + (x / scale), width);
+            self.center.y = calcMove(self.center.y + (y / scale), height);
+        }
+
+        function setRulers() {
+            var midLat = self.minPoint.lat + ((self.maxPoint.lat - self.minPoint.lat) / 2);
+            var midLon = self.minPoint.lon + ((self.maxPoint.lon - self.minPoint.lon) / 2);
+            self.rulers = [
+                [ {point: self.minPoint}, {point: new Point(self.minPoint.lat, self.maxPoint.lon)} ],
+                [ {point: self.minPoint}, {point: new Point(self.maxPoint.lat, self.minPoint.lon)} ],
+                [ {point: new Point(self.maxPoint.lat, self.minPoint.lon)}, {point: self.maxPoint} ],
+                [ {point: new Point(self.minPoint.lat, self.maxPoint.lon)}, {point: self.maxPoint} ],
+                [ {point: new Point(self.maxPoint.lat, midLon)}, {point: new Point(self.minPoint.lat, midLon)} ],
+                [ {point: new Point(midLat, self.minPoint.lon)}, {point: new Point(midLat, self.maxPoint.lon)} ]
             ];
         }
 
         function init() {
+            vehivlesPromise = Vehicles.getVehicles().then(function (vehicles) {
+                vehivlesPromise = null;
+                self.vehicles = vehicles;
+                return self.vehicles;
+            });
+
             return Streets.getStreets().then(function (data) {
                 var streets = [];
                 angular.forEach(data, function drawStreetPath(street) {
@@ -48,20 +79,25 @@ angular.module('BUSzinga').controller('rlMap', [
                     var path = street.path;
                     var len = path.length;
                     for (i = 1; i < len; i++) {
-                        streets.push({
-                            point1: path[i - 1],
-                            point2: path[i]
-                        });
+                        streets.push([{point: path[i - 1]}, { point: path[i]}]);
                     }
                 });
                 self.streets = streets;
+
                 self.minPoint = Store.get('pointEdges', 'min');
                 self.maxPoint = Store.get('pointEdges', 'max');
-                setLimits();
+                setRulers();
             });
         }
 
-        self.incrementScale = incrementScale;
-        self.getScaleRate = getScaleRate;
+        function getVehicles() {
+            return self.vehicles ? $q.when(self.vehicles) : vehivlesPromise;
+        }
+
+
         self.init = init;
+        self.getVehicles = getVehicles;
+        self.move = move;
+        self.getScale = getScale;
+        self.incrementScale = incrementScale;
     }]);

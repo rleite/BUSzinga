@@ -128,7 +128,7 @@ angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
         this.zipCode = street.properties.ZIP_CODE;
 
         this.path = street.geometry.coordinates.map(function (cord) {
-            return new Point(cord[0], cord[1], true);
+            return new Point(cord[1], cord[0], true);
         });
     }
     return Street;

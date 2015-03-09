@@ -1,5 +1,5 @@
 angular.module('BUSzinga')
-    .directive('rlMap', ['$window', function ($window) {
+    .directive('rlMap', ['$window', 'DrawToolkit', function ($window, DrawToolkit) {
         'use strict';
         var w = angular.element($window);
 
@@ -10,7 +10,8 @@ angular.module('BUSzinga')
             var elemDom = $elem[0];
             var width;
             var height;
-            var resizeTimeoutId;
+            var mapContainer;
+            var drawToolkit;
 
             var scaleValueElem;
             var scaleValueHeight;
@@ -27,76 +28,126 @@ angular.module('BUSzinga')
                     .attr('height', height);
             }
 
-            function updateScales() {
+            function updateScaleValueHeight() {
+                var margin = scaleValueHeight - Math.round(mapCtrl.getScale() * scaleValueHeight);
+                scaleValueElem.css({
+                    'margin-top': margin + 'px'
+                });
+            }
+
+            function updateViewPort() {
+                updateScaleValueHeight();
+
+                var scale = mapCtrl.getScale();
+                var scaleDim = Math.round(mapCtrl.drawRadios * scale);
+
+                var centerX = Math.round(mapCtrl.center.x * scale);
+                var centerY = Math.round(mapCtrl.center.y * scale);
+
+                var translateX = (width * 0.5) + centerX - scaleDim;
+                var translateY = (height * 0.5) + centerY - scaleDim;
+
+                angular.element(map[0]).css({
+                    transform: 'scale(' + scale + ')'
+                });
+                angular.element(mapContainer[0]).css({
+                    transform: 'translateX(' + translateX + 'px)' +
+                        ' translateY(' + translateY + 'px)'
+                });
+            }
+
+            function setScales() {
                 var minPoint = mapCtrl.minPoint;
                 var maxPoint = mapCtrl.maxPoint;
 
                 xScale
                     .domain([minPoint.lon, maxPoint.lon])
-                    .range([(width / 2)  + 10 - mapCtrl.scale, (width / 2) + mapCtrl.scale - 10]);
+                    .range([0, mapCtrl.drawRadios * 2]);
 
                 yScale
                     .domain([minPoint.lat, maxPoint.lat])
-                    .range([(height / 2)  + 10 - mapCtrl.scale, (height / 2) + mapCtrl.scale - 10]);
-            }
-
-            function drawLines(lines, style) {
-                var linesSelect = map.selectAll('line.' + style)
-                    .data(lines);
-
-                linesSelect.enter()
-                    .append('line')
-                    .attr('class', style);
-
-                linesSelect.attr('x1', function (line) { return xScale(line.point1.lon); })
-                    .attr('y1', function (line) { return height - yScale(line.point1.lat); })
-                    .attr('x2', function (line) { return xScale(line.point2.lon); })
-                    .attr('y2', function (line) { return height - yScale(line.point2.lat); });
+                    .range([0, mapCtrl.drawRadios * 2]);
             }
 
             function drawMap() {
                 updateDimentions();
-                updateScales();
+                setScales();
 
-                drawLines(mapCtrl.limits, 'limits');
-                drawLines(mapCtrl.streets, 'street');
+                drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
+                drawToolkit.drawLines(mapCtrl.streets, 'street');
             }
 
-            function delayedDrawMap() {
-                if (resizeTimeoutId) {
-                    clearTimeout(resizeTimeoutId);
-                }
-                resizeTimeoutId = setTimeout(drawMap, 500);
+            function drawVehicles() {
+                drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle')
+                    .attr('r', function () {
+                        return 50;
+                    });
             }
 
-            function updateScaleValueHeight() {
-                var margin = scaleValueHeight - Math.round(mapCtrl.getScaleRate() * scaleValueHeight);
-                scaleValueElem.css({
-                    'margin-top': margin + 'px'
+            function setUpControls() {
+                var lastX;
+                var lastY;
+                var isDown;
+
+                $elem.bind('wheel', function (event) {
+                    mapCtrl.incrementScale(Math.round(event.wheelDeltaY * 0.6));
+                    mapCtrl.move(0, 0, width, height);
+                    updateViewPort();
                 });
+
+                $elem.bind('mousedown', function (event) {
+                    isDown = true;
+                    lastX = event.x;
+                    lastY = event.y;
+                });
+                $elem.bind('mouseup', function () {
+                    isDown = false;
+                });
+
+                $elem.bind('mousemove', function (event) {
+                    if (isDown) {
+                        var moveX = lastX - event.x;
+                        var moveY = lastY - event.y;
+                        lastX = event.x;
+                        lastY = event.y;
+
+                        mapCtrl.move(-moveX, -moveY, width, height);
+                        updateViewPort();
+                    }
+                });
+
             }
 
             function init() {
                 // defined 
                 scaleValueElem = angular.element(elemDom.querySelector('.scale-value'));
                 scaleValueHeight = scaleValueElem[0].offsetHeight;
-                updateScaleValueHeight();
 
                 svgElem = d3.select(elemDom).append('svg');
-                map = svgElem.append('g');
+                mapContainer = svgElem.append('g');
+                map = mapContainer.append('g').attr('class', 'map-frame');
                 updateDimentions();
 
-                mapCtrl.init().then(function () {
-                    drawMap();
-                    w.bind('resize', updateDimentions);
-
-                    $elem.bind('wheel', function (event) {
-                        mapCtrl.incrementScale(Math.round(event.wheelDeltaY * 0.5));
-                        updateScaleValueHeight();
-                        delayedDrawMap();
-                    });
-
+                drawToolkit = new DrawToolkit(map, function (d) {
+                    return xScale(d.point.lon);
+                }, function (d) {
+                    return (mapCtrl.drawRadios * 2) - yScale(d.point.lat);
                 });
+
+                mapCtrl.init()
+                    .then(function () {
+                        drawMap();
+                        updateViewPort();
+                        w.bind('resize', function () {
+                            updateDimentions();
+                            mapCtrl.move(0, 0, width, height);
+                            updateViewPort();
+                        });
+
+                        setUpControls();
+                    })
+                    .then(mapCtrl.getVehicles)
+                    .then(drawVehicles);
             }
 
             init();
