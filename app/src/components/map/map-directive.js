@@ -5,19 +5,17 @@ angular.module('BUSzinga')
 
         function fnLink($scope, $elem, $attrs, mapCtrl) {
             $elem.addClass('rl-map');
-            var xScale = d3.scale.linear();
-            var yScale = d3.scale.linear();
             var elemDom = $elem[0];
             var width;
             var height;
-            var mapContainer;
-            var drawToolkit;
 
             var scaleValueElem;
             var scaleValueHeight;
 
             var svgElem;
             var map;
+            var scaledContainer;
+            var nonScaledContainer;
 
             function updateDimentions() {
                 width = elemDom.offsetWidth;
@@ -26,6 +24,7 @@ angular.module('BUSzinga')
                 svgElem
                     .attr('width', width)
                     .attr('height', height);
+
             }
 
             function updateScaleValueHeight() {
@@ -39,48 +38,55 @@ angular.module('BUSzinga')
                 updateScaleValueHeight();
 
                 var scale = mapCtrl.getScale();
-                var scaleDim = Math.round(mapCtrl.drawRadios * scale);
+                var scaledRadios = Math.round(mapCtrl.drawMax * 0.5 * scale);
 
                 var centerX = Math.round(mapCtrl.center.x * scale);
                 var centerY = Math.round(mapCtrl.center.y * scale);
 
-                var translateX = (width * 0.5) + centerX - scaleDim;
-                var translateY = (height * 0.5) + centerY - scaleDim;
+                var translateX = (width * 0.5) + centerX - scaledRadios;
+                var translateY = (height * 0.5) + centerY - scaledRadios;
 
-                angular.element(map[0]).css({
-                    transform: 'scale(' + scale + ')'
-                });
-                angular.element(mapContainer[0]).css({
-                    transform: 'translateX(' + translateX + 'px)' +
-                        ' translateY(' + translateY + 'px)'
-                });
+                scaledContainer.attr('transform', 'scale(' + scale + ')');
+                map.attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
             }
 
-            function setScales() {
+            function getScalers(limit) {
                 var minPoint = mapCtrl.minPoint;
                 var maxPoint = mapCtrl.maxPoint;
-
-                xScale
+                var xD3Scale = d3.scale.linear()
                     .domain([minPoint.lon, maxPoint.lon])
-                    .range([0, mapCtrl.drawRadios * 2]);
+                    .range([0, limit]);
 
-                yScale
+                var yD3Scale = d3.scale.linear()
                     .domain([minPoint.lat, maxPoint.lat])
-                    .range([0, mapCtrl.drawRadios * 2]);
+                    .range([0, limit]);
+
+                return {
+                    xScale: function (d) {
+                        return xD3Scale(d.point.lon);
+                    },
+
+                    yScale: function (d) {
+                        return limit - yD3Scale(d.point.lat);
+                    }
+                };
             }
 
-            function drawMap() {
+            function drawScaled() {
                 updateDimentions();
-                setScales();
-
+                var drawToolkit = new DrawToolkit(scaledContainer, getScalers(mapCtrl.drawMax));
                 drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
                 drawToolkit.drawLines(mapCtrl.streets, 'street');
             }
 
-            function drawVehicles() {
-                drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle')
+            function drawNonScaled() {
+                updateDimentions();
+                var drawToolkit = new DrawToolkit(nonScaledContainer, getScalers(mapCtrl.zoom));
+
+                drawToolkit
+                    .drawCircles(mapCtrl.vehicles, 'vehicle')
                     .attr('r', function () {
-                        return 50;
+                        return 3;
                     });
             }
 
@@ -93,6 +99,7 @@ angular.module('BUSzinga')
                     mapCtrl.incrementScale(Math.round(event.wheelDeltaY * 0.6));
                     mapCtrl.move(0, 0, width, height);
                     updateViewPort();
+                    drawNonScaled();
                 });
 
                 $elem.bind('mousedown', function (event) {
@@ -124,19 +131,14 @@ angular.module('BUSzinga')
                 scaleValueHeight = scaleValueElem[0].offsetHeight;
 
                 svgElem = d3.select(elemDom).append('svg');
-                mapContainer = svgElem.append('g');
-                map = mapContainer.append('g').attr('class', 'map-frame');
+                map = svgElem.append('g').attr('class', 'map-frame');
+                scaledContainer = map.append('g').attr('class', 'scaled-container');
+                nonScaledContainer = map.append('g').attr('class', 'non-scaled-container');
                 updateDimentions();
-
-                drawToolkit = new DrawToolkit(map, function (d) {
-                    return xScale(d.point.lon);
-                }, function (d) {
-                    return (mapCtrl.drawRadios * 2) - yScale(d.point.lat);
-                });
 
                 mapCtrl.init()
                     .then(function () {
-                        drawMap();
+                        drawScaled();
                         updateViewPort();
                         w.bind('resize', function () {
                             updateDimentions();
@@ -147,7 +149,7 @@ angular.module('BUSzinga')
                         setUpControls();
                     })
                     .then(mapCtrl.getVehicles)
-                    .then(drawVehicles);
+                    .then(drawNonScaled);
             }
 
             init();

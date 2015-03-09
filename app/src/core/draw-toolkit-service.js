@@ -1,10 +1,10 @@
 angular.module('BUSzinga').factory('DrawToolkit', function () {
     'use strict';
 
-    function DrawToolkit(board, xScale, yScale) {
+    function DrawToolkit(board, scales) {
         this.board = board;
-        this.xScale = xScale;
-        this.yScale = yScale;
+        this.xScale = scales.xScale;
+        this.yScale = scales.yScale;
     }
 
     DrawToolkit.prototype.get = function (type, style, data) {

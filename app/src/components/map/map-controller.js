@@ -6,31 +6,31 @@ angular.module('BUSzinga').controller('rlMap', [
 
         var vehivlesPromise;
 
-        var minRadios = 320;
-        var maxRadios = 20000;
+        self.drawMin = 640;
+        self.drawMax = 40000;
+        var midPoint;
 
-        self.zoom = minRadios;
-        self.drawRadios = maxRadios;
+        self.zoom = self.drawMin;
         self.center = { x: 0, y: 0 };
 
         function incrementScale(inc) {
             var update = self.zoom + inc;
-            update = update > minRadios ? update : minRadios;
-            update = update < maxRadios ? update : maxRadios;
+            update = update > self.drawMin ? update : self.drawMin;
+            update = update < self.drawMax ? update : self.drawMax;
             self.zoom = update;
         }
 
         function getScale() {
-            var normScale = self.zoom - minRadios;
-            var normMax = maxRadios - minRadios;
+            var normScale = self.zoom - self.drawMin;
+            var normMax = self.drawMax - self.drawMin;
             var scale = normScale / normMax;
-            var minZoomScale = minRadios / maxRadios;
+            var minZoomScale = self.drawMin / self.drawMax;
             return minZoomScale + (scale * (1 - minZoomScale));
         }
 
         function calcMove(move, size) {
             var scale = getScale();
-            var limit = (maxRadios * scale) - ((size / 2) * (1 - scale));
+            var limit = (self.drawMax * 0.5 * scale) - ((size / 2) * (1 - scale));
             limit = limit > 0 ? limit : 0;
 
             var flag;
@@ -63,6 +63,8 @@ angular.module('BUSzinga').controller('rlMap', [
                 [ {point: new Point(self.maxPoint.lat, midLon)}, {point: new Point(self.minPoint.lat, midLon)} ],
                 [ {point: new Point(midLat, self.minPoint.lon)}, {point: new Point(midLat, self.maxPoint.lon)} ]
             ];
+
+            midPoint = {point: new Point(midLat, midLon)};
         }
 
         function init() {
@@ -87,6 +89,8 @@ angular.module('BUSzinga').controller('rlMap', [
                 self.minPoint = Store.get('pointEdges', 'min');
                 self.maxPoint = Store.get('pointEdges', 'max');
                 setRulers();
+            }).then(function () {
+                self.vehicles.push(midPoint);
             });
         }
 
