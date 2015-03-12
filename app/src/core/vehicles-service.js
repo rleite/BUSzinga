@@ -1,29 +1,43 @@
 angular.module('BUSzinga').factory('VehiclesService', [
-    '$q', '$http', 'Nextbus', 'Vehicle',
-    function ($q, $http, bus, Vehicle) {
+    '$q', 'Nextbus', 'Vehicle', 'RoutesService',
+    function ($q, bus, Vehicle, Routes) {
         'use strict';
         var vehicles, promise;
-        // temp Override busLocation
-        bus.getVehicleLocations = function () {
-            return $http({ url: 'data/tmp/vehicles.xml' })
-                .then(function (resp) {
-                    return new X2JS().xml_str2json(resp.data).body.vehicle;
-                });
-        };
 
-        function refresh() {
-            promise = promise || bus.getVehicleLocations().then(function (data) {
-                vehicles = data.map(function (vehicle) {
-                    return new Vehicle(vehicle);
+        function filterByRoute(vehicles, route) {
+            var filterdVehicles;
+            if (route) {
+                filterdVehicles = [];
+                angular.forEach(vehicles, function (vehicle) {
+                    if (vehicle.route.tag === route) {
+                        filterdVehicles.push(vehicle);
+                    }
                 });
-                promise = null;
-                return vehicles;
-            });
+                return filterdVehicles;
+            }
+            return vehicles;
+        }
+
+        function refresh(route) {
+            promise = promise || $q.all([ Routes.getRoutes(), bus.getVehicleLocations()])
+                .then(function (data) {
+                    vehicles = data[1].map(function (vehicle) {
+                        return new Vehicle(vehicle);
+                    });
+                    promise = null;
+                    return vehicles;
+                })
+                .then(function (vehicles) {
+                    return filterByRoute(vehicles, route);
+                });
             return promise;
         }
 
-        function getVehicles() {
-            return (vehicles && $q.when(vehicles)) || refresh();
+        function getVehicles(route) {
+            return ((vehicles && $q.when(vehicles)) || refresh())
+                .then(function (vehicles) {
+                    return filterByRoute(vehicles, route);
+                });
         }
 
         return {

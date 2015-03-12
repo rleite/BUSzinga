@@ -1,0 +1,76 @@
+.rl-map-control {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.rl-map-control .center-control {
+    width: 70px;
+    height: 70px;
+    position: relative;
+}
+
+.rl-map-control .center-control .center-move {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    background-color: black;
+}
+
+.rl-map-control .center-control .center-move.up,
+.rl-map-control .center-control .center-move.down {
+    margin-left: -10px;
+}
+
+.rl-map-control .center-control .center-move.left,
+.rl-map-control .center-control .center-move.right {
+    margin-top: -10px;
+}
+
+.rl-map-control .center-control .center-move.up {
+    top: 0;
+    left: 50%;
+}
+
+.rl-map-control .center-control .center-move.down {
+    bottom: 0;
+    left: 50%;
+}
+
+.rl-map-control .center-control .center-move.left {
+    left: 0;
+    top: 50%;
+}
+
+.rl-map-control .center-control .center-move.right {
+    right: 0;
+    top: 50%;
+}
+
+.rl-map-control .scale-control {
+    height: 20px;
+    width: 20px;
+    margin: 5px 5px 5px 25px;
+    background-color: blue;
+}
+
+.rl-map-control .map-scale-indicator {
+    height: 100px;
+    width: 20px;
+    margin-left: 25px;
+}
+
+.rl-map-control .scale-container {
+    fill: #bbb;
+    stroke: #444;
+    stroke-width: 2;
+}
+
+.rl-map-control .scale-ruler {
+    stroke: #444;
+    stroke-width: 2;
+}
+
+.scale-value {
+    fill: blue;
+}

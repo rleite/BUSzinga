@@ -1,3 +1,5 @@
-<div class="scale-control">
-    <div class="scale-value"></div>
+<rl-map-control></rl-map-control>
+<div class="preview" ng-if="rlMap.preview">
+    <span class="label">{{rlMap.preview.route.title}} <strong>({{rlMap.preview.route.tag}})</strong></span>
 </div>
+<div rl-route-selector="rlMap.route" ></div>

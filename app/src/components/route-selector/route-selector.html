@@ -1,0 +1,4 @@
+<select class="selector" ng-model="routeSelector.route" ng-change="routeSelector.change()"
+    ng-options="route.tag as route.title for route in routeSelector.routes | orderBy:route.title" >
+      <option value="">-- Pick a route --</option>
+</select>

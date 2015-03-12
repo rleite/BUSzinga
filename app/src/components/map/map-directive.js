@@ -9,13 +9,11 @@ angular.module('BUSzinga')
             var width;
             var height;
 
-            var scaleValueElem;
-            var scaleValueHeight;
-
             var svgElem;
             var map;
             var scaledContainer;
             var nonScaledContainer;
+            var duration = 0;
 
             function updateDimentions() {
                 width = elemDom.offsetWidth;
@@ -25,17 +23,15 @@ angular.module('BUSzinga')
                     .attr('width', width)
                     .attr('height', height);
 
+                mapCtrl.setWindow(width, height);
+                mapCtrl.move(0, 0);
             }
 
-            function updateScaleValueHeight() {
-                var margin = scaleValueHeight - Math.round(mapCtrl.getScale() * scaleValueHeight);
-                scaleValueElem.css({
-                    'margin-top': margin + 'px'
-                });
+            function transition(selector) {
+                return selector.transition().duration(duration);
             }
 
-            function updateViewPort() {
-                updateScaleValueHeight();
+            function applyScaleAndCenter(animate) {
 
                 var scale = mapCtrl.getScale();
                 var scaledRadios = Math.round(mapCtrl.drawMax * 0.5 * scale);
@@ -46,8 +42,20 @@ angular.module('BUSzinga')
                 var translateX = (width * 0.5) + centerX - scaledRadios;
                 var translateY = (height * 0.5) + centerY - scaledRadios;
 
-                scaledContainer.attr('transform', 'scale(' + scale + ')');
-                map.attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
+                if (animate) {
+                    duration = 500;
+                }
+
+                DrawToolkit.wrapAnimation(map, transition, function (selector) {
+                    selector.attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
+                });
+
+                DrawToolkit.wrapAnimation(scaledContainer, transition, function (selector) {
+                    selector.attr('transform', 'scale(' + scale + ')');
+                });
+                duration = 0;
+
+                $scope.$broadcast('rlMap.applyScaleAndCenter');
             }
 
             function getScalers(limit) {
@@ -59,7 +67,7 @@ angular.module('BUSzinga')
 
                 var yD3Scale = d3.scale.linear()
                     .domain([minPoint.lat, maxPoint.lat])
-                    .range([0, limit]);
+                    .range([limit, 0]);
 
                 return {
                     xScale: function (d) {
@@ -67,27 +75,68 @@ angular.module('BUSzinga')
                     },
 
                     yScale: function (d) {
-                        return limit - yD3Scale(d.point.lat);
+                        return yD3Scale(d.point.lat);
                     }
                 };
             }
 
             function drawScaled() {
-                updateDimentions();
+                function getStreetPath(street) {
+                    return street.path;
+                }
                 var drawToolkit = new DrawToolkit(scaledContainer, getScalers(mapCtrl.drawMax));
                 drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
-                drawToolkit.drawLines(mapCtrl.streets, 'street');
+                drawToolkit.drawPolylines(mapCtrl.streets.map(getStreetPath), 'street');
             }
 
-            function drawNonScaled() {
-                updateDimentions();
-                var drawToolkit = new DrawToolkit(nonScaledContainer, getScalers(mapCtrl.zoom));
+            function drawNonScaled(animate) {
+                var drawToolkit = new DrawToolkit(nonScaledContainer, getScalers(mapCtrl.getDrawZoom()));
 
-                drawToolkit
-                    .drawCircles(mapCtrl.vehicles, 'vehicle')
-                    .attr('r', function () {
-                        return 3;
-                    });
+                if (animate) {
+                    duration = 500;
+                }
+
+                function isSelected(d) {
+                    return d._active;
+                }
+
+                drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
+                    key: function (d) {
+                        return d.id;
+                    },
+                    transition: transition,
+                    enter: function (selector) {
+                        function updatePreview(vehicle) {
+                            $scope.$apply(function () {
+                                mapCtrl.preview = vehicle;
+                            });
+                        }
+                        selector
+                            .on('click', function (d) {
+                                mapCtrl.setZoom(4);
+                                var scalers = getScalers(mapCtrl.drawMax);
+                                mapCtrl.selectVehicle(d, scalers.xScale(d), scalers.yScale(d));
+                                drawNonScaled(true);
+                                applyScaleAndCenter(true);
+                                d3.event.stopPropagation();
+                            })
+                            .on('mouseover', function (d) {
+                                d._active = true;
+                                drawNonScaled();
+                                updatePreview(d);
+                            })
+                            .on('mouseleave', function (d) {
+                                d._active = false;
+                                drawNonScaled();
+                                updatePreview();
+                            });
+                    }
+                }).attr('r', function (d) {
+                    return isSelected(d) ? 10 : 5;
+                }).style('fill', function (d) {
+                    return '#' + d.route.color;
+                });
+                duration = 0;
             }
 
             function setUpControls() {
@@ -95,40 +144,39 @@ angular.module('BUSzinga')
                 var lastY;
                 var isDown;
 
-                $elem.bind('wheel', function (event) {
-                    mapCtrl.incrementScale(Math.round(event.wheelDeltaY * 0.6));
-                    mapCtrl.move(0, 0, width, height);
-                    updateViewPort();
+                $elem.on('wheel', function (event) {
+                    var inc = event.wheelDeltaY > 0 ? -1 : 1;
+                    mapCtrl.incrementZoom(inc);
+                    mapCtrl.move(0, 0);
                     drawNonScaled();
+                    applyScaleAndCenter();
                 });
 
-                $elem.bind('mousedown', function (event) {
+                $elem.on('mousedown', function (event) {
                     isDown = true;
                     lastX = event.x;
                     lastY = event.y;
                 });
-                $elem.bind('mouseup', function () {
+                $elem.on('mouseup', function () {
                     isDown = false;
                 });
 
-                $elem.bind('mousemove', function (event) {
+                $elem.on('mousemove', function (event) {
                     if (isDown) {
                         var moveX = lastX - event.x;
                         var moveY = lastY - event.y;
                         lastX = event.x;
                         lastY = event.y;
 
-                        mapCtrl.move(-moveX, -moveY, width, height);
-                        updateViewPort();
+                        mapCtrl.move(-moveX, -moveY);
+                        applyScaleAndCenter();
                     }
                 });
 
             }
 
             function init() {
-                // defined 
-                scaleValueElem = angular.element(elemDom.querySelector('.scale-value'));
-                scaleValueHeight = scaleValueElem[0].offsetHeight;
+                // defined
 
                 svgElem = d3.select(elemDom).append('svg');
                 map = svgElem.append('g').attr('class', 'map-frame');
@@ -136,20 +184,25 @@ angular.module('BUSzinga')
                 nonScaledContainer = map.append('g').attr('class', 'non-scaled-container');
                 updateDimentions();
 
-                mapCtrl.init()
-                    .then(function () {
-                        drawScaled();
-                        updateViewPort();
-                        w.bind('resize', function () {
-                            updateDimentions();
-                            mapCtrl.move(0, 0, width, height);
-                            updateViewPort();
-                        });
+                mapCtrl.init(drawScaled, drawNonScaled);
+                applyScaleAndCenter();
 
-                        setUpControls();
-                    })
-                    .then(mapCtrl.getVehicles)
-                    .then(drawNonScaled);
+                $scope.$on('rlMapControl.scaleUpdated', function () {
+                    mapCtrl.move(0, 0);
+                    drawNonScaled(true);
+                    applyScaleAndCenter(true);
+                });
+                $scope.$on('rlMapControl.move', function () {
+                    applyScaleAndCenter(true);
+                });
+
+                setUpControls();
+
+                w.on('resize', function () {
+                    updateDimentions();
+                    // update the center position
+                    applyScaleAndCenter();
+                });
             }
 
             init();

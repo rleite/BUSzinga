@@ -7,45 +7,100 @@ angular.module('BUSzinga').factory('DrawToolkit', function () {
         this.yScale = scales.yScale;
     }
 
-    DrawToolkit.prototype.get = function (type, style, data) {
-        var linesSelect = this.board.selectAll(type + '.' + style)
-            .data(data);
-
-        linesSelect.enter()
-            .append(type)
-            .attr('class', style);
-
-        return linesSelect;
-    };
-
-    DrawToolkit.prototype.drawCircles = function (circles, style) {
+    function pointPosition(selector) {
         var self = this;
-        return self.get('circle', style, circles)
-            .attr('cx', function (d) {
-                return self.xScale(d);
-            })
-            .attr('cy', function (d) {
-                return self.yScale(d);
+        selector
+            .attr('points', function (d) {
+                return d.map(function (p) {
+                    return self.xScale(p) + ',' + self.yScale(p) + ' ';
+                });
             });
+    }
+
+    function defaultEnter(selector, name, style) {
+        return selector.append(name).attr('class', style);
+    }
+
+    var types = {
+
+        circle: {
+            fnName: 'drawCircles',
+            setPosition: function (selector) {
+                var self = this;
+                selector
+                    .attr('cx', function (d) {
+                        return self.xScale(d);
+                    })
+                    .attr('cy', function (d) {
+                        return self.yScale(d);
+                    });
+            }
+        },
+
+        polygon: {
+            fnName: 'drawPolygons',
+            setPosition: pointPosition
+        },
+
+        polyline: {
+            fnName: 'drawPolylines',
+            setPosition: pointPosition
+        },
+
+        line: {
+            fnName: 'drawLines',
+            setPosition: function (selector) {
+                var self = this;
+                selector
+                    .attr('x1', function (d) {
+                        return self.xScale(d[0]);
+                    })
+                    .attr('y1', function (d) {
+                        return self.yScale(d[0]);
+                    })
+                    .attr('x2', function (d) {
+                        return self.xScale(d[1]);
+                    })
+                    .attr('y2', function (d) {
+                        return self.yScale(d[1]);
+                    });
+            }
+        }
     };
 
-    DrawToolkit.prototype.drawLines = function (lines, style) {
-        var self = this;
-
-        return self.get('line', style, lines)
-            .attr('x1', function (d) {
-                return self.xScale(d[0]);
-            })
-            .attr('y1', function (d) {
-                return self.yScale(d[0]);
-            })
-            .attr('x2', function (d) {
-                return self.xScale(d[1]);
-            })
-            .attr('y2', function (d) {
-                return self.yScale(d[1]);
-            });
+    DrawToolkit.wrapAnimation = function (selector, transition, callFn) {
+        (transition ? transition(selector) : selector).call(callFn);
     };
+
+    angular.forEach(types, function (type, name) {
+        type.enter = type.enter || defaultEnter;
+        DrawToolkit.prototype[type.fnName] = function (dataset, style, options) {
+            var self = this;
+            options = options || {};
+            options.enter = options.enter || angular.noop;
+
+            function remove(selector) {
+                selector.exit().remove();
+            }
+
+            function enter(selector) {
+                type.enter(selector.enter(), name, style).call(options.enter);
+            }
+
+            function position(selector) {
+                DrawToolkit.wrapAnimation(selector, options.transition, type.setPosition.bind(self));
+            }
+
+            var selector = this.board
+                .selectAll('.' + style)
+                .data(dataset, options.key)
+                .call(enter)
+                .call(remove)
+                .call(position);
+
+            return selector;
+        };
+    });
 
     return DrawToolkit;
 });

@@ -1,55 +1,128 @@
 angular.module('BUSzinga').controller('rlMap', [
-    '$q', 'StreetsService', 'VehiclesService', 'Point', 'Store',
-    function ($q, Streets, Vehicles, Point, Store) {
+    '$scope', 'StreetsService', 'VehiclesService', 'Point', 'MAP.CONF',
+    function ($scope, Streets, Vehicles, Point, config) {
         'use strict';
         var self = this;
 
-        var vehivlesPromise;
+        var draw;
+        var interval;
+        var routeSelected;
+        var width, height;
 
-        self.drawMin = 640;
-        self.drawMax = 40000;
-        var midPoint;
+        self.minPoint = new Point(config.minPoint.lat, config.minPoint.lon);
+        self.maxPoint = new Point(config.maxPoint.lat, config.maxPoint.lon);
 
-        self.zoom = self.drawMin;
-        self.center = { x: 0, y: 0 };
+        self.drawMin = config.drawMin;
+        self.drawMax = config.drawMax;
 
-        function incrementScale(inc) {
-            var update = self.zoom + inc;
-            update = update > self.drawMin ? update : self.drawMin;
-            update = update < self.drawMax ? update : self.drawMax;
-            self.zoom = update;
+        var zoomScale = d3.scale.linear()
+            .domain([0, config.maxZoom - 1])
+            .range([self.drawMax, self.drawMin]);
+
+        self.zoom = 11;
+        self.center = { x: config.center.x, y: config.center.y };
+
+        self.streets = [];
+        self.vehicles = [];
+        self.rulers = [];
+
+        var drawRacio = self.drawMin / self.drawMax;
+        var drawRadios = self.drawMax * 0.5;
+
+        function streetVehicleInterpolation() {
+            angular.forEach(self.vehicles, function (vehicle) {
+                var street = self.streets[0];
+                var dist;
+                var target;
+
+                function getPoint(street, j) {
+                    var point1 = street.path[j].point;
+                    var point2 = street.path[j + 1].point;
+                    var t = vehicle.point.lineSegmentParameter(point1, point2);
+                    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+                    var pointArray = d3.interpolate(point1.toArray(), point2.toArray())(t);
+                    return new Point(pointArray[1], pointArray[0]);
+                }
+
+                var minPoint = getPoint(street, 0);
+                var minDist = vehicle.point.distance(minPoint);
+
+                var i = 1;
+                var j = 2;
+                while (i < self.streets.length) {
+                    street = self.streets[i];
+                    while (j < (street.path.length - 1)) {
+
+                        target = getPoint(street, j);
+                        dist = vehicle.point.distance(target);
+
+                        if (dist < minDist) {
+                            minDist = dist;
+                            minPoint = target;
+                        }
+
+                        j++;
+                    }
+                    j = 0;
+                    i++;
+                }
+
+                vehicle.point = minPoint;
+            });
         }
 
-        function getScale() {
-            var normScale = self.zoom - self.drawMin;
+        function setZoom(zoom) {
+            zoom = zoom > 0 ? zoom : 0;
+            zoom = zoom < config.maxZoom - 1 ? zoom : config.maxZoom - 1;
+            self.zoom = zoom;
+        }
+
+        function incrementZoom(inc) {
+            setZoom(self.zoom + inc);
+        }
+
+        function getDrawZoom() {
+            return zoomScale(self.zoom);
+        }
+
+        function getScale(zoom) {
+            zoom = (zoom || self.zoom);
+            var normDrawZoom = zoomScale(zoom) - self.drawMin;
             var normMax = self.drawMax - self.drawMin;
-            var scale = normScale / normMax;
-            var minZoomScale = self.drawMin / self.drawMax;
-            return minZoomScale + (scale * (1 - minZoomScale));
+            var scale = normDrawZoom / normMax;
+            return drawRacio + (scale * (1 - drawRacio));
         }
 
-        function calcMove(move, size) {
+        function calcPosition(pos, size) {
             var scale = getScale();
-            var limit = (self.drawMax * 0.5 * scale) - ((size / 2) * (1 - scale));
+            var limit = drawRadios - ((size * 0.5) / scale);
             limit = limit > 0 ? limit : 0;
 
             var flag;
-            var scaledMove = move * scale;
-            if (move < 0) {
+            var scaledMove = pos / scale;
+            if (pos < 0) {
                 limit *= -1;
                 flag = scaledMove > limit;
             } else {
                 flag = scaledMove < limit;
             }
 
-            return flag ? move : limit / scale;
+            return flag ? scaledMove : limit;
         }
 
-        function move(x, y, width, height) {
-            var scale = getScale();
+        function setCenter(x, y) {
+            self.center.x = calcPosition(x, width);
+            self.center.y = calcPosition(y, height);
+        }
 
-            self.center.x = calcMove(self.center.x + (x / scale), width);
-            self.center.y = calcMove(self.center.y + (y / scale), height);
+        function move(x, y) {
+            var scale = getScale();
+            setCenter(self.center.x * scale + x, self.center.y * scale + y);
+        }
+
+        function selectVehicle(vehicles, x, y) {
+            var scale = getScale();
+            setCenter((drawRadios - x) * scale, (drawRadios - y)  * scale);
         }
 
         function setRulers() {
@@ -63,45 +136,64 @@ angular.module('BUSzinga').controller('rlMap', [
                 [ {point: new Point(self.maxPoint.lat, midLon)}, {point: new Point(self.minPoint.lat, midLon)} ],
                 [ {point: new Point(midLat, self.minPoint.lon)}, {point: new Point(midLat, self.maxPoint.lon)} ]
             ];
-
-            midPoint = {point: new Point(midLat, midLon)};
         }
 
-        function init() {
-            vehivlesPromise = Vehicles.getVehicles().then(function (vehicles) {
-                vehivlesPromise = null;
+        function fetchVehicles(animate) {
+            return Vehicles.refresh(routeSelected).then(function (vehicles) {
                 self.vehicles = vehicles;
+
+                // streetVehicleInterpolation();
+
+                draw.nonScaled(animate);
                 return self.vehicles;
             });
+        }
 
-            return Streets.getStreets().then(function (data) {
-                var streets = [];
-                angular.forEach(data, function drawStreetPath(street) {
-                    var i;
-                    var path = street.path;
-                    var len = path.length;
-                    for (i = 1; i < len; i++) {
-                        streets.push([{point: path[i - 1]}, { point: path[i]}]);
-                    }
+        function setWindow(w, h) {
+            width = w;
+            height = h;
+        }
+
+        function init(drawScaled, drawNonScaled) {
+            draw = {
+                scaled: drawScaled,
+                nonScaled: drawNonScaled
+            };
+
+            $scope.$on('rlRouteSelector.changeRoute', function (ev, route) {
+                routeSelected = route;
+                Vehicles.getVehicles(route).then(function (vehicles) {
+                    self.vehicles = vehicles;
+                    draw.nonScaled();
                 });
+            });
+
+            return Streets.getStreets().then(function (streets) {
                 self.streets = streets;
 
-                self.minPoint = Store.get('pointEdges', 'min');
-                self.maxPoint = Store.get('pointEdges', 'max');
                 setRulers();
-            }).then(function () {
-                self.vehicles.push(midPoint);
+                draw.scaled();
+
+                fetchVehicles();
+                if (interval) {
+                    clearInterval(interval);
+                }
+                interval = setInterval(function () {
+                    fetchVehicles(true);
+                }, config.refresh);
+
             });
         }
 
-        function getVehicles() {
-            return self.vehicles ? $q.when(self.vehicles) : vehivlesPromise;
-        }
-
-
         self.init = init;
-        self.getVehicles = getVehicles;
         self.move = move;
+        self.setWindow = setWindow;
+        self.setCenter = setCenter;
+        self.selectVehicle = selectVehicle;
         self.getScale = getScale;
-        self.incrementScale = incrementScale;
+        self.setZoom = setZoom;
+        self.getDrawZoom = getDrawZoom;
+        self.incrementZoom = incrementZoom;
     }]);
+
+

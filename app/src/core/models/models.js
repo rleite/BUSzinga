@@ -9,6 +9,22 @@ angular.module('BUSzinga').factory('Point', ['Store', function (Store) {
         }
     }
 
+    Point.prototype.distance = function (p) {
+        return d3.geo.distance(this.toArray(), p.toArray());
+    };
+
+    Point.prototype.toArray = function () {
+        return [this.lon, this.lat];
+    };
+
+    Point.prototype.lineSegmentParameter = function (p0, p1) {
+        var x10 = p1.lon - p0.lon;
+        var y10 = p1.lat - p0.lat;
+        var x20 = this.lon - p0.lon;
+        var y20 = this.lat - p0.lat;
+        return (x20 * x10 + y20 * y10) / (x10 * x10 + y10 * y10);
+    };
+
     Point.prototype.setMaxMin = function () {
         var minPoint = Store.get('pointEdges', 'min') ||
                 Store.register('pointEdges', 'min', new Point(this.lat, this.lon));
@@ -128,7 +144,7 @@ angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
         this.zipCode = street.properties.ZIP_CODE;
 
         this.path = street.geometry.coordinates.map(function (cord) {
-            return new Point(cord[1], cord[0], true);
+            return {point: new Point(cord[1], cord[0], true)};
         });
     }
     return Street;
