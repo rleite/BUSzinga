@@ -1,21 +1,17 @@
 angular.module('BUSzinga').factory('StreetsService', [
-    '$http', '$q', 'Street',
-    function ($http, $q, Street) {
+    '$q', 'StaticResourceService', 'NeighborhoodsService', 'Street',
+    function ($q, Resource, Neighborhoods, Street) {
         'use strict';
         var streets;
         var promise;
 
-        function requestStreets() {
-            return $http({
-                url: 'data/sfmaps/streets.json'
-            }).then(function (resp) {
-                return resp.data.features;
-            });
-        }
-
         function init() {
-            promise = promise || requestStreets().then(function (data) {
-                streets = data.map(function (street) {
+            promise = promise || $q.all([
+                Resource.getStreets(),
+                Neighborhoods.getNeighborhoods()
+            ]).then(function (data) {
+                var streetsData = data[0];
+                streets = streetsData.map(function (street) {
                     return new Street(street);
                 });
 

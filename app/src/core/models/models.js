@@ -127,7 +127,7 @@ angular.module('BUSzinga').factory('Vehicle', ['Point', 'Store', function (Point
     return Vehicle;
 }]);
 
-angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
+angular.module('BUSzinga').factory('Street', ['Point', 'Store', function (Point, Store) {
     'use strict';
     function Street(street) {
         this.accepted = street.properties.ACCEPTED;
@@ -151,6 +151,10 @@ angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
         this.zipCode = street.properties.ZIP_CODE;
 
         this.setPath(street.geometry.coordinates);
+        this.neighborhood = Store.get('neighborhood', this.nhood);
+        if (this.neighborhood) {
+            this.neighborhood.streets.push(this);
+        }
     }
 
     Street.prototype.setPath = function (coordinates) {
@@ -178,4 +182,20 @@ angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
     };
 
     return Street;
+}]);
+
+angular.module('BUSzinga').factory('Neighborhood', ['Point', 'Store', function (Point, Store) {
+    'use strict';
+    function Neighborhood(neighborhood) {
+        this.name = neighborhood.properties.neighborho;
+
+        this.edges = neighborhood.geometry.coordinates[0].map(function (p) {
+            return {point: new Point(p[1], p[0]) };
+        });
+
+        this.streets = [];
+
+        Store.register('neighborhood', this.name, this);
+    }
+    return Neighborhood;
 }]);

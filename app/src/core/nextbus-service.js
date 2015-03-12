@@ -9,7 +9,7 @@ angular.module('BUSzinga')
             return new X2JS().xml_str2json(resp.data).body;
         }
 
-        function makeRequest(params) {
+        function request(params) {
             params = params || {};
             params.a = params.a || 'sf-muni';
 
@@ -20,10 +20,10 @@ angular.module('BUSzinga')
         }
 
         function getRouteConfig() {
-            // var makeRequest = function () {
+            // var request = function () {
             //     return $http({ url: 'data/tmp/routes.xml' }).then(parseResponse);
             // };
-            return makeRequest({
+            return request({
                 command: 'routeConfig'
             }).then(function (data) {
                 return data.route;
@@ -31,16 +31,16 @@ angular.module('BUSzinga')
         }
 
         function getAgencyList() {
-            return makeRequest({command: 'agencyList'}).then(function (data) {
+            return request({command: 'agencyList'}).then(function (data) {
                 return data.agency;
             });
         }
 
         function getVehicleLocations() {
-            // var makeRequest = function () {
+            // var request = function () {
             //     return $http({ url: 'data/tmp/vehicles.xml' }).then(parseResponse);
             // };
-            return makeRequest({
+            return request({
                 command: 'vehicleLocations'
             }).then(function (data) {
                 return data.vehicle;
