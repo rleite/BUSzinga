@@ -11,9 +11,10 @@ angular.module('BUSzinga')
 
             var svgElem;
             var map;
-            var scaledContainer;
-            var nonScaledContainer;
+            var mapBoard;
             var duration = 0;
+
+            var drawToolkit;
 
             function updateDimentions() {
                 width = elemDom.offsetWidth;
@@ -50,7 +51,7 @@ angular.module('BUSzinga')
                     selector.attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
                 });
 
-                DrawToolkit.wrapAnimation(scaledContainer, transition, function (selector) {
+                DrawToolkit.wrapAnimation(mapBoard, transition, function (selector) {
                     selector.attr('transform', 'scale(' + scale + ')');
                 });
                 duration = 0;
@@ -80,25 +81,32 @@ angular.module('BUSzinga')
                 };
             }
 
-            function drawScaled() {
-                function getStreetPath(street) {
-                    return street.path;
-                }
-                var drawToolkit = new DrawToolkit(scaledContainer, getScalers(mapCtrl.drawMax));
+            function drawBackground() {
                 drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
-                drawToolkit.drawPolylines(mapCtrl.streets.map(getStreetPath), 'street');
+                drawToolkit.drawPolylines(mapCtrl.streets.map(function getStreetPath(street) {
+                    return street.path;
+                }), 'street');
             }
 
-            function drawNonScaled(animate) {
-                var drawToolkit = new DrawToolkit(nonScaledContainer, getScalers(mapCtrl.getDrawZoom()));
+            function reDraw(animate) {
 
                 if (animate) {
                     duration = 500;
                 }
 
-                function isSelected(d) {
-                    return d._active;
-                }
+                var routes = [];
+                ((mapCtrl.route && mapCtrl.route.paths) || []).forEach(function (p) {
+                    routes.push(p);
+                });
+                var t = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
+
+                drawToolkit.drawPolylines(routes, 'route')
+                    .style('stroke', function () {
+                        return '#' + mapCtrl.route.color;
+                    })
+                    .style('stroke-width', function () {
+                        return 4 * t;
+                    });
 
                 drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
                     key: function (d) {
@@ -112,29 +120,34 @@ angular.module('BUSzinga')
                             });
                         }
                         selector
+                            // color
+                            .style('fill', function (d) { return '#' + d.route.color; })
                             .on('click', function (d) {
+                                d._active = false;
                                 mapCtrl.setZoom(4);
                                 var scalers = getScalers(mapCtrl.drawMax);
                                 mapCtrl.selectVehicle(d, scalers.xScale(d), scalers.yScale(d));
-                                drawNonScaled(true);
+                                reDraw(true);
                                 applyScaleAndCenter(true);
                                 d3.event.stopPropagation();
                             })
                             .on('mouseover', function (d) {
                                 d._active = true;
-                                drawNonScaled();
+                                reDraw();
                                 updatePreview(d);
+                                d3.event.stopPropagation();
                             })
                             .on('mouseleave', function (d) {
                                 d._active = false;
-                                drawNonScaled();
+                                reDraw();
                                 updatePreview();
+                                d3.event.stopPropagation();
                             });
                     }
                 }).attr('r', function (d) {
-                    return isSelected(d) ? 10 : 5;
-                }).style('fill', function (d) {
-                    return '#' + d.route.color;
+                    return (d._active ? 10 : 5) * t;
+                }).style('stroke-width', function () {
+                    return 1 * t;
                 });
                 duration = 0;
             }
@@ -148,7 +161,7 @@ angular.module('BUSzinga')
                     var inc = event.wheelDeltaY > 0 ? -1 : 1;
                     mapCtrl.incrementZoom(inc);
                     mapCtrl.move(0, 0);
-                    drawNonScaled();
+                    reDraw();
                     applyScaleAndCenter();
                 });
 
@@ -180,16 +193,18 @@ angular.module('BUSzinga')
 
                 svgElem = d3.select(elemDom).append('svg');
                 map = svgElem.append('g').attr('class', 'map-frame');
-                scaledContainer = map.append('g').attr('class', 'scaled-container');
-                nonScaledContainer = map.append('g').attr('class', 'non-scaled-container');
+                mapBoard = map.append('g').attr('class', 'scaled-container');
+                drawToolkit = new DrawToolkit(mapBoard, getScalers(mapCtrl.drawMax));
+
                 updateDimentions();
 
-                mapCtrl.init(drawScaled, drawNonScaled);
+
+                mapCtrl.init(drawBackground, reDraw);
                 applyScaleAndCenter();
 
                 $scope.$on('rlMapControl.scaleUpdated', function () {
                     mapCtrl.move(0, 0);
-                    drawNonScaled(true);
+                    reDraw(true);
                     applyScaleAndCenter(true);
                 });
                 $scope.$on('rlMapControl.move', function () {

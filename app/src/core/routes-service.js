@@ -1,18 +1,23 @@
 angular.module('BUSzinga').factory('RoutesService', [
-    '$q', 'Nextbus', 'Route',
-    function ($q, bus, Route) {
+    '$q', 'Nextbus', 'Route', 'StreetsService',
+    function ($q, bus, Route, StreetsService) {
         'use strict';
         var routes, promise;
 
         function init() {
-            promise = promise || bus.getRouteConfig().then(function (data) {
+            promise = promise || $q.all([
+                bus.getRouteConfig(),
+                StreetsService.getStreets()
+            ]).then(function (data) {
                 routes = [];
-                angular.forEach(data, function (routeData) {
+                angular.forEach(data[0], function (routeData) {
                     routes.push(new Route(routeData));
 
                     promise = null;
                 });
                 return routes;
+            })['finally'](function () {
+                promise = null;
             });
             return promise;
         }

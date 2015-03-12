@@ -1,10 +1,10 @@
 angular.module('BUSzinga').controller('rlMap', [
-    '$scope', 'StreetsService', 'VehiclesService', 'Point', 'MAP.CONF',
-    function ($scope, Streets, Vehicles, Point, config) {
+    '$scope', 'StreetsService', 'VehiclesService', 'Store', 'Point', 'MAP.CONF',
+    function ($scope, Streets, Vehicles, Store, Point, config) {
         'use strict';
         var self = this;
 
-        var draw;
+        var reDraw;
         var interval;
         var routeSelected;
         var width, height;
@@ -15,7 +15,7 @@ angular.module('BUSzinga').controller('rlMap', [
         self.drawMin = config.drawMin;
         self.drawMax = config.drawMax;
 
-        var zoomScale = d3.scale.linear()
+        var zoomScaler = d3.scale.linear()
             .domain([0, config.maxZoom - 1])
             .range([self.drawMax, self.drawMin]);
 
@@ -29,48 +29,6 @@ angular.module('BUSzinga').controller('rlMap', [
         var drawRacio = self.drawMin / self.drawMax;
         var drawRadios = self.drawMax * 0.5;
 
-        function streetVehicleInterpolation() {
-            angular.forEach(self.vehicles, function (vehicle) {
-                var street = self.streets[0];
-                var dist;
-                var target;
-
-                function getPoint(street, j) {
-                    var point1 = street.path[j].point;
-                    var point2 = street.path[j + 1].point;
-                    var t = vehicle.point.lineSegmentParameter(point1, point2);
-                    t = t < 0 ? 0 : (t > 1 ? 1 : t);
-                    var pointArray = d3.interpolate(point1.toArray(), point2.toArray())(t);
-                    return new Point(pointArray[1], pointArray[0]);
-                }
-
-                var minPoint = getPoint(street, 0);
-                var minDist = vehicle.point.distance(minPoint);
-
-                var i = 1;
-                var j = 2;
-                while (i < self.streets.length) {
-                    street = self.streets[i];
-                    while (j < (street.path.length - 1)) {
-
-                        target = getPoint(street, j);
-                        dist = vehicle.point.distance(target);
-
-                        if (dist < minDist) {
-                            minDist = dist;
-                            minPoint = target;
-                        }
-
-                        j++;
-                    }
-                    j = 0;
-                    i++;
-                }
-
-                vehicle.point = minPoint;
-            });
-        }
-
         function setZoom(zoom) {
             zoom = zoom > 0 ? zoom : 0;
             zoom = zoom < config.maxZoom - 1 ? zoom : config.maxZoom - 1;
@@ -82,12 +40,12 @@ angular.module('BUSzinga').controller('rlMap', [
         }
 
         function getDrawZoom() {
-            return zoomScale(self.zoom);
+            return zoomScaler(self.zoom);
         }
 
         function getScale(zoom) {
             zoom = (zoom || self.zoom);
-            var normDrawZoom = zoomScale(zoom) - self.drawMin;
+            var normDrawZoom = zoomScaler(zoom) - self.drawMin;
             var normMax = self.drawMax - self.drawMin;
             var scale = normDrawZoom / normMax;
             return drawRacio + (scale * (1 - drawRacio));
@@ -142,9 +100,7 @@ angular.module('BUSzinga').controller('rlMap', [
             return Vehicles.refresh(routeSelected).then(function (vehicles) {
                 self.vehicles = vehicles;
 
-                // streetVehicleInterpolation();
-
-                draw.nonScaled(animate);
+                reDraw(animate);
                 return self.vehicles;
             });
         }
@@ -154,17 +110,17 @@ angular.module('BUSzinga').controller('rlMap', [
             height = h;
         }
 
-        function init(drawScaled, drawNonScaled) {
-            draw = {
-                scaled: drawScaled,
-                nonScaled: drawNonScaled
-            };
+        function init(drawBackground, reDrawFn) {
+            reDraw = reDrawFn;
 
             $scope.$on('rlRouteSelector.changeRoute', function (ev, route) {
                 routeSelected = route;
                 Vehicles.getVehicles(route).then(function (vehicles) {
                     self.vehicles = vehicles;
-                    draw.nonScaled();
+                    if (route) {
+                        self.route = Store.get('route', route);
+                    }
+                    reDraw();
                 });
             });
 
@@ -172,7 +128,7 @@ angular.module('BUSzinga').controller('rlMap', [
                 self.streets = streets;
 
                 setRulers();
-                draw.scaled();
+                drawBackground();
 
                 fetchVehicles();
                 if (interval) {
@@ -191,6 +147,7 @@ angular.module('BUSzinga').controller('rlMap', [
         self.setCenter = setCenter;
         self.selectVehicle = selectVehicle;
         self.getScale = getScale;
+        self.zoomScaler = zoomScaler;
         self.setZoom = setZoom;
         self.getDrawZoom = getDrawZoom;
         self.incrementZoom = incrementZoom;

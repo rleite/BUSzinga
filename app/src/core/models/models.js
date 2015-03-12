@@ -94,12 +94,18 @@ angular.module('BUSzinga').factory('Route', [
 
             this.paths = toolkit.toArray(route.path).map(function (path) {
                 return toolkit.toArray(path.point).map(function (point) {
-                    return new Point(point._lat, point._lon);
+                    return {point: new Point(point._lat, point._lon)};
                 });
             });
 
             Store.register('route', this.tag, this);
         }
+
+        Route.prototype.getDirection = function (tag) {
+            return this.directions.filter(function (d) {
+                return d.tag === tag;
+            })[0];
+        };
         return Route;
     }]);
 
@@ -107,13 +113,14 @@ angular.module('BUSzinga').factory('Vehicle', ['Point', 'Store', function (Point
     'use strict';
     function Vehicle(vehicle) {
         this.id = vehicle._id;
-        this.dirTag = vehicle._dirTag;
         this.heading = vehicle._heading;
         this.predictable = vehicle._predictable;
         this.secsSinceReport = vehicle._secsSinceReport;
         this.speedKmHr = vehicle._speedKmHr;
 
         this.route = Store.get('route', vehicle._routeTag);
+
+        this.direction = this.route.getDirection(vehicle._dirTag);
 
         this.point = new Point(vehicle._lat, vehicle._lon);
     }
@@ -143,9 +150,32 @@ angular.module('BUSzinga').factory('Street', ['Point', function (Point) {
         this.tNodeCnn = street.properties.T_NODE_CNN;
         this.zipCode = street.properties.ZIP_CODE;
 
-        this.path = street.geometry.coordinates.map(function (cord) {
-            return {point: new Point(cord[1], cord[0], true)};
-        });
+        this.setPath(street.geometry.coordinates);
     }
+
+    Street.prototype.setPath = function (coordinates) {
+        var lats = [];
+        var lons = [];
+        var dists = [];
+        var lastPoint;
+
+        this.path = coordinates.map(function (cord) {
+            var path = {point: new Point(cord[1], cord[0], true)};
+
+            lats.push(path.point.lat);
+            lons.push(path.point.lon);
+            if (lastPoint) {
+                dists.push(lastPoint.distance(path.point));
+            }
+            lastPoint = path.point;
+
+            return path;
+        });
+
+        this.minPoint = new Point(d3.min(lats), d3.min(lons));
+        this.maxPoint = new Point(d3.max(lats), d3.max(lons));
+        this.maxDist = d3.max(dists);
+    };
+
     return Street;
 }]);

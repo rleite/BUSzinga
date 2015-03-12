@@ -18,9 +18,12 @@
     stroke: red;
 }
 
+.rl-map .route {
+    fill: none;
+}
+
 .rl-map .vehicle {
     fill: #3B8471;
-    stroke-width: 1;
     stroke: rgba(255, 255, 255, 0.5);
 }
 
