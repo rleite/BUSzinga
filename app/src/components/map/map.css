@@ -18,6 +18,12 @@
     stroke: red;
 }
 
+.rl-map .neighborhood {
+    fill: red;
+    stroke-width: 1;
+    stroke: black;
+}
+
 .rl-map .route {
     fill: none;
 }

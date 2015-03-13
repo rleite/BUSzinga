@@ -72,6 +72,9 @@ angular.module('BUSzinga')
 
                 return {
                     xScale: function (d) {
+                        if (!d.point) {
+                            console.log(d);
+                        }
                         return xD3Scale(d.point.lon);
                     },
 
@@ -82,7 +85,18 @@ angular.module('BUSzinga')
             }
 
             function drawBackground() {
+                var neighborhoodColorScale = d3.scale.linear()
+                    .domain([0, mapCtrl.neighborhoods.length - 1])
+                    .range(['#FFF', '#AAA']);
+
                 drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
+
+                drawToolkit.drawPolygons(mapCtrl.neighborhoods.map(function (neighborhood) {
+                    return neighborhood.edges;
+                }), 'neighborhood').style('fill', function (d, i) {
+                    return neighborhoodColorScale(i);
+                });
+
                 drawToolkit.drawPolylines(mapCtrl.streets.map(function getStreetPath(street) {
                     return street.path;
                 }), 'street');
@@ -94,20 +108,22 @@ angular.module('BUSzinga')
                     duration = 500;
                 }
 
+                // routes
                 var routes = [];
                 ((mapCtrl.route && mapCtrl.route.paths) || []).forEach(function (p) {
                     routes.push(p);
                 });
-                var t = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
+                var drawRacio = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
 
                 drawToolkit.drawPolylines(routes, 'route')
                     .style('stroke', function () {
                         return '#' + mapCtrl.route.color;
                     })
                     .style('stroke-width', function () {
-                        return 4 * t;
+                        return 4 * drawRacio;
                     });
 
+                // vehicles
                 drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
                     key: function (d) {
                         return d.id;
@@ -145,9 +161,9 @@ angular.module('BUSzinga')
                             });
                     }
                 }).attr('r', function (d) {
-                    return (d._active ? 10 : 5) * t;
+                    return (d._active ? 10 : 5) * drawRacio;
                 }).style('stroke-width', function () {
-                    return 1 * t;
+                    return drawRacio;
                 });
                 duration = 0;
             }

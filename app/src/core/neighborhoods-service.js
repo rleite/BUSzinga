@@ -10,7 +10,6 @@ angular.module('BUSzinga').factory('NeighborhoodsService', [
                 neighborhoods = neighborhoodsData.map(function (neighborhood) {
                     return new Neighborhood(neighborhood);
                 });
-
                 return neighborhoods;
             })['finally'](function () {
                 promise = null;

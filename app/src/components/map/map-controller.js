@@ -1,6 +1,6 @@
 angular.module('BUSzinga').controller('rlMap', [
-    '$scope', 'StreetsService', 'VehiclesService', 'Store', 'Point', 'MAP.CONF',
-    function ($scope, Streets, Vehicles, Store, Point, config) {
+    '$scope', '$q', 'StreetsService', 'VehiclesService', 'NeighborhoodsService', 'Store', 'Point', 'MAP.CONF',
+    function ($scope, $q, Streets, Vehicles, Neighborhoods, Store, Point, config) {
         'use strict';
         var self = this;
 
@@ -99,9 +99,18 @@ angular.module('BUSzinga').controller('rlMap', [
         function fetchVehicles(animate) {
             return Vehicles.refresh(routeSelected).then(function (vehicles) {
                 self.vehicles = vehicles;
+            });
+        }
 
-                reDraw(animate);
-                return self.vehicles;
+        function fetchStreets() {
+            return Streets.getStreets().then(function (streets) {
+                self.streets = streets;
+            });
+        }
+
+        function fetchNeighborhoods() {
+            return Neighborhoods.getNeighborhoods().then(function (neighborhoods) {
+                self.neighborhoods = neighborhoods;
             });
         }
 
@@ -124,20 +133,22 @@ angular.module('BUSzinga').controller('rlMap', [
                 });
             });
 
-            return Streets.getStreets().then(function (streets) {
-                self.streets = streets;
+            if (interval) {
+                clearInterval(interval);
+            }
+            interval = setInterval(function () {
+                fetchVehicles();
+                reDraw(true);
+            }, config.refresh);
 
+            return $q.all([
+                fetchStreets(),
+                fetchNeighborhoods(),
+                fetchVehicles()
+            ]).then(function () {
                 setRulers();
                 drawBackground();
-
-                fetchVehicles();
-                if (interval) {
-                    clearInterval(interval);
-                }
-                interval = setInterval(function () {
-                    fetchVehicles(true);
-                }, config.refresh);
-
+                reDraw();
             });
         }
 
