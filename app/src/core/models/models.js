@@ -195,30 +195,25 @@ angular.module('BUSzinga').factory('Neighborhood', ['Point', 'Store', function (
             this.setPolygonEdges(neighborhood.geometry.coordinates[0]);
         }
 
-        if (this.edges[0] instanceof Array) {
-            console.log(neighborhood.geometry.type);
-            console.log(this.edges);
-        }
-
         this.streets = [];
 
         Store.register('neighborhood', this.name, this);
     }
 
     Neighborhood.prototype.setPolygonEdges = function (coordinates) {
-        this.edges = coordinates.map(function (p) {
+        this.edges = [coordinates.map(function (p) {
             return {point: new Point(p[1], p[0]) };
-        });
+        })];
     };
 
     Neighborhood.prototype.setMultiPolygonEdges = function (coordinates) {
         var edges = [];
         angular.forEach(coordinates, function (c) {
-            angular.forEach(c, function (d) {
-                edges = edges.concat(d.map(function (p) {
+            edges = edges.concat(c.map(function (d) {
+                return d.map(function (p) {
                     return {point: new Point(p[1], p[0]) };
-                }));
-            });
+                });
+            }));
         });
 
         this.edges = edges;

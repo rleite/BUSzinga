@@ -87,13 +87,16 @@ angular.module('BUSzinga')
             function drawBackground() {
                 var neighborhoodColorScale = d3.scale.linear()
                     .domain([0, mapCtrl.neighborhoods.length - 1])
-                    .range(['#FFF', '#AAA']);
+                    .range(['#FFFFFF', '#E8E8E8']);
+                var neighborhoods = mapCtrl.neighborhoods.map(function (neighborhood) {
+                    return neighborhood.edges;
+                }).reduce(function (ra, rb) {
+                    return ra.concat(rb);
+                });
 
                 drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
 
-                drawToolkit.drawPolygons(mapCtrl.neighborhoods.map(function (neighborhood) {
-                    return neighborhood.edges;
-                }), 'neighborhood').style('fill', function (d, i) {
+                drawToolkit.drawPolygons(neighborhoods, 'neighborhood').style('fill', function (d, i) {
                     return neighborhoodColorScale(i);
                 });
 
@@ -108,20 +111,19 @@ angular.module('BUSzinga')
                     duration = 500;
                 }
 
-                // routes
-                var routes = [];
-                ((mapCtrl.route && mapCtrl.route.paths) || []).forEach(function (p) {
-                    routes.push(p);
-                });
                 var drawRacio = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
 
-                drawToolkit.drawPolylines(routes, 'route')
-                    .style('stroke', function () {
-                        return '#' + mapCtrl.route.color;
-                    })
-                    .style('stroke-width', function () {
-                        return 4 * drawRacio;
-                    });
+                if (mapCtrl.route) {
+                    drawToolkit.drawPolylines(mapCtrl.route.paths.reduce(function (ra, rb) {
+                        return ra.concat(rb);
+                    }), 'route')
+                        .style('stroke', function () {
+                            return '#' + mapCtrl.route.color;
+                        })
+                        .style('stroke-width', function () {
+                            return 4 * drawRacio;
+                        });
+                }
 
                 // vehicles
                 drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
