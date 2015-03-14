@@ -25,6 +25,12 @@ This is a side project to develep a **D3js/angularJS** app.
     - [X] Route filtering
     - [X] Vehicle's Route preview
 
+## Issues
+- Vehicles street interpolation (priority)
+    - The code is breaking in few api calls(rarely).
+- map control zoom
+    - The zoom is too short near draw scale and too fast as the scale increases.
+
 ## BUS FEED API
 
 - [NextBusXMLFeed](http://www.nextbus.com/xmlFeedDocs/NextBusXMLFeed.pdf)
