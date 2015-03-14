@@ -17,6 +17,16 @@
     background-color: black;
 }
 
+.rl-map-control .center-control .logo {
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+
+    background-image: url(/assets/img/logo.jpg);
+    background-size: cover;
+}
+
 .rl-map-control .center-control .center-move.up,
 .rl-map-control .center-control .center-move.down {
     margin-left: -10px;

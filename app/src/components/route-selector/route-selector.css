@@ -4,6 +4,8 @@
     right: 10px;
     background: #ccc;
     padding: 5px;
+
+    border-radius: 2px;
 }
 
 .rl-route-selector .selector {
