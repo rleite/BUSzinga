@@ -9,8 +9,8 @@ angular.module('BUSzinga').controller('rlMap', [
         var routeSelected;
         var width, height;
 
-        self.minPoint = new Point(config.minPoint.lat, config.minPoint.lon);
-        self.maxPoint = new Point(config.maxPoint.lat, config.maxPoint.lon);
+        self.minPoint = new Point(config.minPoint.lon, config.minPoint.lat);
+        self.maxPoint = new Point(config.maxPoint.lon, config.maxPoint.lat);
 
         self.drawMin = config.drawMin;
         self.drawMax = config.drawMax;
@@ -87,13 +87,28 @@ angular.module('BUSzinga').controller('rlMap', [
             var midLat = self.minPoint.lat + ((self.maxPoint.lat - self.minPoint.lat) / 2);
             var midLon = self.minPoint.lon + ((self.maxPoint.lon - self.minPoint.lon) / 2);
             self.rulers = [
-                [ {point: self.minPoint}, {point: new Point(self.minPoint.lat, self.maxPoint.lon)} ],
-                [ {point: self.minPoint}, {point: new Point(self.maxPoint.lat, self.minPoint.lon)} ],
-                [ {point: new Point(self.maxPoint.lat, self.minPoint.lon)}, {point: self.maxPoint} ],
-                [ {point: new Point(self.minPoint.lat, self.maxPoint.lon)}, {point: self.maxPoint} ],
-                [ {point: new Point(self.maxPoint.lat, midLon)}, {point: new Point(self.minPoint.lat, midLon)} ],
-                [ {point: new Point(midLat, self.minPoint.lon)}, {point: new Point(midLat, self.maxPoint.lon)} ]
+                [ {point: self.minPoint}, {point: new Point(self.maxPoint.lon, self.minPoint.lat)} ],
+                [ {point: self.minPoint}, {point: new Point(self.minPoint.lon, self.maxPoint.lat)} ],
+                [ {point: new Point(self.minPoint.lon, self.maxPoint.lat)}, {point: self.maxPoint} ],
+                [ {point: new Point(self.maxPoint.lon, self.minPoint.lat)}, {point: self.maxPoint} ],
+                [ {point: new Point(midLon, self.maxPoint.lat)}, {point: new Point(midLon, self.minPoint.lat)} ],
+                [ {point: new Point(self.minPoint.lon, midLat)}, {point: new Point(self.maxPoint.lon, midLat)} ]
             ];
+        }
+
+        function setGroups() {
+            self.groups = Store.get('streetGrpoup', 'all')
+                .map(function (group) {
+                    return [
+                        [ {point: group.minPoint}, {point: new Point(group.maxPoint.lon, group.minPoint.lat)} ],
+                        [ {point: group.minPoint}, {point: new Point(group.minPoint.lon, group.maxPoint.lat)} ],
+                        [ {point: new Point(group.minPoint.lon, group.maxPoint.lat)}, {point: group.maxPoint} ],
+                        [ {point: new Point(group.maxPoint.lon, group.minPoint.lat)}, {point: group.maxPoint} ]
+                    ];
+                })
+                .reduce(function (prev, group) {
+                    return prev.concat(group);
+                });
         }
 
         function fetchVehicles(animate) {
@@ -105,6 +120,7 @@ angular.module('BUSzinga').controller('rlMap', [
         function fetchStreets() {
             return Streets.getStreets().then(function (streets) {
                 self.streets = streets;
+                // setGroups();
             });
         }
 
@@ -146,7 +162,7 @@ angular.module('BUSzinga').controller('rlMap', [
                 fetchNeighborhoods(),
                 fetchVehicles()
             ]).then(function () {
-                setRulers();
+                // setRulers();
                 drawBackground();
                 reDraw();
             });

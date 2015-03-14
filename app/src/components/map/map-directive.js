@@ -94,7 +94,13 @@ angular.module('BUSzinga')
                     return ra.concat(rb);
                 });
 
-                drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
+                if (mapCtrl.rulers) {
+                    drawToolkit.drawLines(mapCtrl.rulers, 'ruler');
+                }
+
+                if (mapCtrl.groups) {
+                    drawToolkit.drawLines(mapCtrl.groups, 'group');
+                }
 
                 drawToolkit.drawPolygons(neighborhoods, 'neighborhood').style('fill', function (d, i) {
                     return neighborhoodColorScale(i);
@@ -114,9 +120,7 @@ angular.module('BUSzinga')
                 var drawRacio = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
 
                 if (mapCtrl.route) {
-                    drawToolkit.drawPolylines(mapCtrl.route.paths.reduce(function (ra, rb) {
-                        return ra.concat(rb);
-                    }), 'route')
+                    drawToolkit.drawPolylines(mapCtrl.route.paths, 'route')
                         .style('stroke', function () {
                             return '#' + mapCtrl.route.color;
                         })

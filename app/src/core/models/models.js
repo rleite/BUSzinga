@@ -1,12 +1,9 @@
-angular.module('BUSzinga').factory('Point', ['Store', function (Store) {
+angular.module('BUSzinga').factory('Point', function () {
     'use strict';
 
-    function Point(lat, lon, setMaxMin) {
+    function Point(lon, lat) {
         this.lat = Number(lat);
         this.lon = Number(lon);
-        if (setMaxMin) {
-            this.setMaxMin();
-        }
     }
 
     Point.prototype.distance = function (p) {
@@ -25,22 +22,17 @@ angular.module('BUSzinga').factory('Point', ['Store', function (Store) {
         return (x20 * x10 + y20 * y10) / (x10 * x10 + y10 * y10);
     };
 
-    Point.prototype.setMaxMin = function () {
-        var minPoint = Store.get('pointEdges', 'min') ||
-                Store.register('pointEdges', 'min', new Point(this.lat, this.lon));
-        var maxPoint = Store.get('pointEdges', 'max') ||
-                Store.register('pointEdges', 'max', new Point(this.lat, this.lon));
+    Point.prototype.clone = function () {
+        return new Point(this.lon, this.lat);
+    };
 
-        // update max
-        minPoint.lat = this.lat < minPoint.lat ? this.lat : minPoint.lat;
-        minPoint.lon = this.lon < minPoint.lon ? this.lon : minPoint.lon;
-        // update min
-        maxPoint.lat = this.lat > maxPoint.lat ? this.lat : maxPoint.lat;
-        maxPoint.lon = this.lon > maxPoint.lon ? this.lon : maxPoint.lon;
+    // static
+    Point.fromArray = function (array) {
+        return new Point(array[0], array[1]);
     };
 
     return Point;
-}]);
+});
 
 angular.module('BUSzinga').factory('Stop', ['Point', 'Store', function (Point, Store) {
     'use strict';
@@ -49,7 +41,7 @@ angular.module('BUSzinga').factory('Stop', ['Point', 'Store', function (Point, S
         this.title = stop._title;
         this.stopId = stop._stopId;
 
-        this.point = new Point(stop._lat, stop._lon);
+        this.point = new Point(stop._lon, stop._lat);
 
         Store.register('stop', this.tag, this);
     }
@@ -81,8 +73,8 @@ angular.module('BUSzinga').factory('Route', [
             this.color = route._color;
             this.oppositeColor = route._oppositeColor;
 
-            this.minPoint = new Point(route._latMin, route._lonMin);
-            this.maxPoint = new Point(route._latMax, route._lonMax);
+            this.minPoint = new Point(route._lonMin, route._latMin);
+            this.maxPoint = new Point(route._lonMax, route._latMax);
 
             this.stops = toolkit.toArray(route.stop).map(function (stop) {
                 return new Stop(stop);
@@ -94,7 +86,7 @@ angular.module('BUSzinga').factory('Route', [
 
             this.paths = toolkit.toArray(route.path).map(function (path) {
                 return toolkit.toArray(path.point).map(function (point) {
-                    return {point: new Point(point._lat, point._lon)};
+                    return {point: new Point(point._lon, point._lat)};
                 });
             });
 
@@ -122,7 +114,7 @@ angular.module('BUSzinga').factory('Vehicle', ['Point', 'Store', function (Point
 
         this.direction = this.route.getDirection(vehicle._dirTag);
 
-        this.point = new Point(vehicle._lat, vehicle._lon);
+        this.point = new Point(vehicle._lon, vehicle._lat);
     }
     return Vehicle;
 }]);
@@ -150,11 +142,10 @@ angular.module('BUSzinga').factory('Street', ['Point', 'Store', function (Point,
         this.tNodeCnn = street.properties.T_NODE_CNN;
         this.zipCode = street.properties.ZIP_CODE;
 
+        this.groups = [];
+
         this.setPath(street.geometry.coordinates);
         this.neighborhood = Store.get('neighborhood', this.nhood);
-        if (this.neighborhood) {
-            this.neighborhood.streets.push(this);
-        }
     }
 
     Street.prototype.setPath = function (coordinates) {
@@ -164,7 +155,7 @@ angular.module('BUSzinga').factory('Street', ['Point', 'Store', function (Point,
         var lastPoint;
 
         this.path = coordinates.map(function (cord) {
-            var path = {point: new Point(cord[1], cord[0], true)};
+            var path = {point: Point.fromArray(cord)};
 
             lats.push(path.point.lat);
             lons.push(path.point.lon);
@@ -176,16 +167,39 @@ angular.module('BUSzinga').factory('Street', ['Point', 'Store', function (Point,
             return path;
         });
 
-        this.minPoint = new Point(d3.min(lats), d3.min(lons));
-        this.maxPoint = new Point(d3.max(lats), d3.max(lons));
+        this.minPoint = new Point(d3.min(lons), d3.min(lats));
+        this.maxPoint = new Point(d3.max(lons), d3.max(lats));
         this.maxDist = d3.max(dists);
+
+        this.setMaxMinPoints();
     };
+
+
+    Street.prototype.setMaxMinPoints = function () {
+        var minPoint = Store.get('streetPoint', 'min') ||
+                Store.register('streetPoint', 'min', this.minPoint.clone());
+        var maxPoint = Store.get('streetPoint', 'max') ||
+                Store.register('streetPoint', 'max', this.maxPoint.clone());
+
+        // update min
+        minPoint.lat = this.minPoint.lat < minPoint.lat ? this.minPoint.lat : minPoint.lat;
+        minPoint.lon = this.minPoint.lon < minPoint.lon ? this.minPoint.lon : minPoint.lon;
+        // update max
+        maxPoint.lat = this.maxPoint.lat > maxPoint.lat ? this.maxPoint.lat : maxPoint.lat;
+        maxPoint.lon = this.maxPoint.lon > maxPoint.lon ? this.maxPoint.lon : maxPoint.lon;
+    };
+
 
     return Street;
 }]);
 
 angular.module('BUSzinga').factory('Neighborhood', ['Point', 'Store', function (Point, Store) {
     'use strict';
+
+    function wrapPoint(p) {
+        return {point: Point.fromArray(p)};
+    }
+
     function Neighborhood(neighborhood) {
         this.name = neighborhood.properties.neighborho;
 
@@ -201,18 +215,14 @@ angular.module('BUSzinga').factory('Neighborhood', ['Point', 'Store', function (
     }
 
     Neighborhood.prototype.setPolygonEdges = function (coordinates) {
-        this.edges = [coordinates.map(function (p) {
-            return {point: new Point(p[1], p[0]) };
-        })];
+        this.edges = [coordinates.map(wrapPoint)];
     };
 
     Neighborhood.prototype.setMultiPolygonEdges = function (coordinates) {
         var edges = [];
         angular.forEach(coordinates, function (c) {
             edges = edges.concat(c.map(function (d) {
-                return d.map(function (p) {
-                    return {point: new Point(p[1], p[0]) };
-                });
+                return d.map(wrapPoint);
             }));
         });
 
@@ -220,4 +230,26 @@ angular.module('BUSzinga').factory('Neighborhood', ['Point', 'Store', function (
     };
 
     return Neighborhood;
+}]);
+
+angular.module('BUSzinga').factory('StreetGroup', ['Point', function (Point) {
+    'use strict';
+    function StreetGroup(minLon, minLat, maxLon, maxLat) {
+        this.minPoint = new Point(minLon, minLat);
+        this.maxPoint = new Point(maxLon, maxLat);
+        this.streets = [];
+    }
+
+    StreetGroup.prototype.isInside = function (point) {
+        var betweenLon = point.lon >= this.minPoint.lon && point.lon <= this.maxPoint.lon;
+        var betweenLat = point.lat >= this.minPoint.lat && point.lat <= this.maxPoint.lat;
+        return betweenLat && betweenLon;
+    };
+
+    StreetGroup.prototype.addStreet = function (street) {
+        this.streets.push(street);
+        street.groups.push(this);
+    };
+
+    return StreetGroup;
 }]);

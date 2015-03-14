@@ -14,7 +14,7 @@ angular.module('BUSzinga').factory('VehiclesService', [
         //         var t = vehicle.point.lineSegmentParameter(point1, point2);
         //         t = t < 0 ? 0 : (t > 1 ? 1 : t);
         //         var pointArray = d3.interpolate(point1.toArray(), point2.toArray())(t);
-        //         return new Point(pointArray[1], pointArray[0]);
+        //         return Point.fromArray(pointArray);
         //     }
 
         //     function devideAndConquer(i, len) {

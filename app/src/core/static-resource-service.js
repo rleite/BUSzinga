@@ -17,8 +17,13 @@ angular.module('BUSzinga').factory('StaticResourceService', ['$http', function (
         return request('data/sfmaps/neighborhoods.json');
     }
 
+    function getFreeways() {
+        return request('data/sfmaps/freeways.json');
+    }
+
     return {
         getStreets: getStreets,
-        getNeighborhoods: getNeighborhoods
+        getNeighborhoods: getNeighborhoods,
+        getFreeways: getFreeways
     };
 }]);

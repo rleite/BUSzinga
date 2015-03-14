@@ -1,5 +1,5 @@
 .rl-map {
-    background-color: #BBB;
+    background-color: #AAA;
     width: 100%;
     height: 100%;
     position: relative;
@@ -19,8 +19,13 @@
 }
 
 .rl-map .neighborhood {
-    fill: red;
     stroke-width: 1;
+    stroke: black;
+}
+
+.rl-map .group {
+    fill: red;
+    stroke-width: 200;
     stroke: black;
 }
 
