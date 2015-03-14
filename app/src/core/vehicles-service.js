@@ -67,21 +67,19 @@ angular.module('BUSzinga').factory('VehiclesService', [
             });
         }
 
-        function filterByRoute(vehicles, route) {
-            var filterdVehicles;
-            if (route) {
-                filterdVehicles = [];
-                angular.forEach(vehicles, function (vehicle) {
-                    if (vehicle.route.tag === route) {
-                        filterdVehicles.push(vehicle);
-                    }
-                });
-                return filterdVehicles;
+        function filterByRoute(vehicles, routes) {
+            if (!routes || !routes.length) {
+                return vehicles;
             }
-            return vehicles;
+
+            return vehicles.filter(function (vehicle) {
+                return !!(routes.filter(function (route) {
+                    return route.tag === vehicle.route.tag;
+                })[0]);
+            });
         }
 
-        function refresh(route) {
+        function refresh(routes) {
             promise = promise || $q.all([
                 bus.getVehicleLocations(), Routes.getRoutes(), Streets.getStreets()
             ]).then(function (data) {
@@ -92,17 +90,17 @@ angular.module('BUSzinga').factory('VehiclesService', [
                 streetVehicleInterpolation();
                 return vehicles;
             }).then(function (vehicles) {
-                return filterByRoute(vehicles, route);
+                return filterByRoute(vehicles, routes);
             })['finally'](function () {
                 promise = null;
             });
             return promise;
         }
 
-        function getVehicles(route) {
+        function getVehicles(routes) {
             return ((vehicles && $q.when(vehicles)) || refresh())
                 .then(function (vehicles) {
-                    return filterByRoute(vehicles, route);
+                    return filterByRoute(vehicles, routes);
                 });
         }
 

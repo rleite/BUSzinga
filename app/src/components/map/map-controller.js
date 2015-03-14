@@ -6,7 +6,7 @@ angular.module('BUSzinga').controller('rlMap', [
 
         var reDraw;
         var interval;
-        var routeSelected;
+        var routesSelected;
         var width, height;
 
         self.minPoint = new Point(config.minPoint.lon, config.minPoint.lat);
@@ -112,8 +112,9 @@ angular.module('BUSzinga').controller('rlMap', [
         }
 
         function fetchVehicles() {
-            return Vehicles.refresh(routeSelected).then(function (vehicles) {
+            return Vehicles.refresh(routesSelected).then(function (vehicles) {
                 self.vehicles = vehicles;
+                reDraw();
             });
         }
 
@@ -138,33 +139,28 @@ angular.module('BUSzinga').controller('rlMap', [
         function init(drawBackground, reDrawFn) {
             reDraw = reDrawFn;
 
-            $scope.$on('rlRouteSelector.changeRoute', function (ev, route) {
-                routeSelected = route;
-                Vehicles.getVehicles(route).then(function (vehicles) {
+            $scope.$on('rlRouteSelector.changeRoute', function (e, routes) {
+                routesSelected = routes;
+                Vehicles.getVehicles(routes).then(function (vehicles) {
                     self.vehicles = vehicles;
-                    if (route) {
-                        self.route = Store.get('route', route);
-                    }
                     reDraw();
                 });
             });
 
+            var promises = [
+                fetchStreets(),
+                fetchNeighborhoods()
+            ];
+
             if (interval) {
                 clearInterval(interval);
             }
-            interval = setInterval(function () {
-                fetchVehicles();
-                reDraw(true);
-            }, config.refresh);
+            interval = setInterval(fetchVehicles, config.refresh);
+            fetchVehicles();
 
-            return $q.all([
-                fetchStreets(),
-                fetchNeighborhoods(),
-                fetchVehicles()
-            ]).then(function () {
+            return $q.all(promises).then(function () {
                 // setRulers();
                 drawBackground();
-                reDraw();
             });
         }
 

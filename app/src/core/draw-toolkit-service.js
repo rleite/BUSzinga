@@ -7,7 +7,7 @@ angular.module('BUSzinga').factory('DrawToolkit', function () {
         this.yScale = scales.yScale;
     }
 
-    function pointPosition(selector) {
+    function pointsPosition(selector) {
         var self = this;
         selector
             .attr('points', function (d) {
@@ -39,12 +39,12 @@ angular.module('BUSzinga').factory('DrawToolkit', function () {
 
         polygon: {
             fnName: 'drawPolygons',
-            setPosition: pointPosition
+            setPosition: pointsPosition
         },
 
         polyline: {
             fnName: 'drawPolylines',
-            setPosition: pointPosition
+            setPosition: pointsPosition
         },
 
         line: {
@@ -68,8 +68,8 @@ angular.module('BUSzinga').factory('DrawToolkit', function () {
         }
     };
 
-    DrawToolkit.wrapAnimation = function (selector, transition, callFn) {
-        (transition ? transition(selector) : selector).call(callFn);
+    DrawToolkit.wrapAnimation = function (selector, animation) {
+        return animation ? animation(selector) : selector;
     };
 
     angular.forEach(types, function (type, name) {
@@ -84,11 +84,14 @@ angular.module('BUSzinga').factory('DrawToolkit', function () {
             }
 
             function enter(selector) {
-                type.enter(selector.enter(), name, style).call(options.enter);
+                type.enter(selector.enter(), name, style)
+                    .call(type.setPosition.bind(self))
+                    .call(options.enter);
             }
 
             function position(selector) {
-                DrawToolkit.wrapAnimation(selector, options.transition, type.setPosition.bind(self));
+                DrawToolkit.wrapAnimation(selector, options.animation)
+                    .call(type.setPosition.bind(self));
             }
 
             var selector = this.board

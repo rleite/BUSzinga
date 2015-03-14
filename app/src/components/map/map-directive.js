@@ -12,7 +12,6 @@ angular.module('BUSzinga')
             var svgElem;
             var map;
             var mapBoard;
-            var duration = 0;
 
             var drawToolkit;
 
@@ -29,8 +28,9 @@ angular.module('BUSzinga')
                 mapCtrl.move(0, 0);
             }
 
-            function transition(selector) {
-                return selector.transition().duration(duration);
+            function scaleAnimation(selector) {
+                return selector.transition()
+                    .duration(500);
             }
 
             function applyScaleAndCenter(animate) {
@@ -44,18 +44,11 @@ angular.module('BUSzinga')
                 var translateX = (width * 0.5) + centerX - scaledRadios;
                 var translateY = (height * 0.5) + centerY - scaledRadios;
 
-                if (animate) {
-                    duration = 500;
-                }
+                DrawToolkit.wrapAnimation(map, animate && scaleAnimation)
+                    .attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
 
-                DrawToolkit.wrapAnimation(map, transition, function (selector) {
-                    selector.attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
-                });
-
-                DrawToolkit.wrapAnimation(mapBoard, transition, function (selector) {
-                    selector.attr('transform', 'scale(' + scale + ')');
-                });
-                duration = 0;
+                DrawToolkit.wrapAnimation(mapBoard, animate && scaleAnimation)
+                    .attr('transform', 'scale(' + scale + ')');
 
                 $scope.$broadcast('rlMap.applyScaleAndCenter');
             }
@@ -73,9 +66,6 @@ angular.module('BUSzinga')
 
                 return {
                     xScale: function (d) {
-                        if (!d.point) {
-                            console.log(d);
-                        }
                         return xD3Scale(d.point.lon);
                     },
 
@@ -112,30 +102,34 @@ angular.module('BUSzinga')
                 }), 'street');
             }
 
-            function reDraw(animate) {
-
-                if (animate) {
-                    duration = 500;
-                }
+            function reDraw(animateScale) {
 
                 var drawRacio = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
 
-                if (mapCtrl.route) {
-                    drawToolkit.drawPolylines(mapCtrl.route.paths, 'route')
-                        .style('stroke', function () {
-                            return '#' + mapCtrl.route.color;
-                        })
-                        .style('stroke-width', function () {
-                            return 4 * drawRacio;
-                        });
-                }
-
                 // vehicles
-                drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
+                var vehiclesSelector = drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
                     key: function (d) {
                         return d.id;
                     },
-                    transition: transition,
+                    animation: function (selector) {
+
+                        return selector
+                            .each(function (d) {
+                                d.animation = d.animation || {};
+                            })
+                            .filter(function (d) {
+                                return !d.animation.moving;
+                            })
+                            .each(function (d) {
+                                d.animation.moving = true;
+                            })
+                            .transition()
+                            .ease('linear')
+                            .duration(2000)
+                            .each('end', function (d) {
+                                d.animation.moving = false;
+                            });
+                    },
                     enter: function (selector) {
                         function updatePreview(vehicle) {
                             $scope.$apply(function () {
@@ -150,7 +144,7 @@ angular.module('BUSzinga')
                                 mapCtrl.setZoom(4);
                                 var scalers = getScalers(mapCtrl.drawMax);
                                 mapCtrl.selectVehicle(d, scalers.xScale(d), scalers.yScale(d));
-                                reDraw(true);
+                                reDraw(500);
                                 applyScaleAndCenter(true);
                                 d3.event.stopPropagation();
                             })
@@ -167,12 +161,14 @@ angular.module('BUSzinga')
                                 d3.event.stopPropagation();
                             });
                     }
-                }).attr('r', function (d) {
-                    return (d._active ? 10 : 5) * drawRacio;
-                }).style('stroke-width', function () {
-                    return drawRacio * 2;
                 });
-                duration = 0;
+
+                DrawToolkit.wrapAnimation(vehiclesSelector, animateScale && scaleAnimation)
+                    .attr('r', function (d) {
+                        return (d._active ? 10 : 5) * drawRacio;
+                    }).style('stroke-width', function () {
+                        return drawRacio * 2;
+                    });
             }
 
             function setUpControls() {
@@ -227,7 +223,7 @@ angular.module('BUSzinga')
 
                 $scope.$on('rlMapControl.scaleUpdated', function () {
                     mapCtrl.move(0, 0);
-                    reDraw(true);
+                    reDraw(500);
                     applyScaleAndCenter(true);
                 });
                 $scope.$on('rlMapControl.move', function () {
