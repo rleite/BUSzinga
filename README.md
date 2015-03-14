@@ -21,8 +21,9 @@ This is a side project to develep a **D3js/angularJS** app.
     - [X] Vehicles street interpolation
     - [X] Vehicles move animation
     - [ ] Vehicles street move interpolation
-- [X] Route filtering
-- [X] Vehicle's Route preview
+- [X] Route
+    - [X] Route filtering
+    - [X] Vehicle's Route preview
 
 ## BUS FEED API
 
