@@ -6,7 +6,7 @@ This is a side project to develep a **D3js/angularJS** app.
 
 ## Live now
 
-[buszinga.iurleite.com](buszinga.iurleite.com)
+[buszinga.iurleite.com](http://buszinga.iurleite.com)
 
 ## Features
 - [X] generate map
