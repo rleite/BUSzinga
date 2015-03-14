@@ -17,6 +17,7 @@ angular.module('BUSzinga')
             var drawToolkit;
 
             function updateDimentions() {
+
                 width = elemDom.offsetWidth;
                 height = elemDom.offsetHeight;
 
@@ -169,7 +170,7 @@ angular.module('BUSzinga')
                 }).attr('r', function (d) {
                     return (d._active ? 10 : 5) * drawRacio;
                 }).style('stroke-width', function () {
-                    return drawRacio;
+                    return drawRacio * 2;
                 });
                 duration = 0;
             }

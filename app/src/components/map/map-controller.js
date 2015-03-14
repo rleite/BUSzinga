@@ -111,7 +111,7 @@ angular.module('BUSzinga').controller('rlMap', [
                 });
         }
 
-        function fetchVehicles(animate) {
+        function fetchVehicles() {
             return Vehicles.refresh(routeSelected).then(function (vehicles) {
                 self.vehicles = vehicles;
             });

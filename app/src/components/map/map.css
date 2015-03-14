@@ -13,19 +13,8 @@
     fill: none;
 }
 
-.rl-map .ruler {
-    stroke-width: 20;
-    stroke: red;
-}
-
 .rl-map .neighborhood {
     stroke-width: 1;
-    stroke: black;
-}
-
-.rl-map .group {
-    fill: red;
-    stroke-width: 200;
     stroke: black;
 }
 
@@ -35,7 +24,7 @@
 
 .rl-map .vehicle {
     fill: #3B8471;
-    stroke: rgba(255, 255, 255, 0.5);
+    stroke: #FFF;
 }
 
 .rl-map .preview {
@@ -48,4 +37,13 @@
 .rl-map .preview .label {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 2px;
+}
+
+.rl-map .ruler {
+    stroke-width: 20;
+}
+
+.rl-map .group {
+    stroke-width: 20;
+    stroke: black;
 }

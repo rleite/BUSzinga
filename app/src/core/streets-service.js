@@ -6,7 +6,7 @@ angular.module('BUSzinga').factory('StreetsService', [
         var promise;
 
         function streetGroups() {
-            var numGroups = 6;
+            var numGroups = 10;
             var minPoint = Store.get('streetPoint', 'min');
             var maxPoint = Store.get('streetPoint', 'max');
 
