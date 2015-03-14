@@ -1,5 +1,3 @@
-# BUSzinga
-
 ![](/app/assets/img/logo.jpg)
 
 Bus track of san francisco Buses.
