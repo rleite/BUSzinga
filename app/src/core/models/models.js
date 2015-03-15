@@ -275,15 +275,14 @@ angular.module('BUSzinga').factory('GraphNode', function () {
         this.point = point;
 
         this.neighbors = [];
+        this.distance = [];
 
         this.streets = [];
     }
 
     GraphNode.prototype.addNeighbors = function (node, dist) {
-        this.neighbors.push({
-            node: node,
-            distance: dist
-        });
+        this.neighbors.push(node);
+        this.distance.push(dist);
     };
 
     GraphNode.prototype.addStreet = function (street) {
