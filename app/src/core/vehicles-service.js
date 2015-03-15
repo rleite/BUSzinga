@@ -32,7 +32,7 @@ angular.module('BUSzinga').factory('VehiclesService', [
 
                 var group = selectGroup(vehicle);
 
-                if (group) {
+                if (group && group.streets.length) {
 
                     streets = group.streets;
 
