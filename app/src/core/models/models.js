@@ -119,79 +119,94 @@ angular.module('BUSzinga').factory('Vehicle', ['Point', 'Store', function (Point
     return Vehicle;
 }]);
 
-angular.module('BUSzinga').factory('Street', ['Point', 'Store', function (Point, Store) {
-    'use strict';
-    function Street(street) {
-        this.accepted = street.properties.ACCEPTED;
-        this.classcode = street.properties.CLASSCODE;
-        this.cnn = street.properties.CNN;
-        this.cnntext = street.properties.CNNTEXT;
-        this.district = street.properties.DISTRICT;
-        this.fNodeCnn = street.properties.F_NODE_CNN;
-        this.jurisdicti = street.properties.JURISDICTI;
-        this.layer = street.properties.LAYER;
-        this.lfFadd = street.properties.LF_FADD;
-        this.lfToadd = street.properties.LF_TOADD;
-        this.nhood = street.properties.NHOOD;
-        this.rtFadd = street.properties.RT_FADD;
-        this.rtToadd = street.properties.RT_TOADD;
-        this.street = street.properties.STREET;
-        this.streetname = street.properties.STREETNAME;
-        this.streetGc = street.properties.STREET_GC;
-        this.stType = street.properties.ST_TYPE;
-        this.tNodeCnn = street.properties.T_NODE_CNN;
-        this.zipCode = street.properties.ZIP_CODE;
+angular.module('BUSzinga').factory('Street', [
+    'Point', 'Store', 'PointGraph',
+    function (Point, Store, PointGraph) {
+        'use strict';
+        function Street(street) {
+            this.accepted = street.properties.ACCEPTED;
+            this.classcode = street.properties.CLASSCODE;
+            this.cnn = street.properties.CNN;
+            this.cnntext = street.properties.CNNTEXT;
+            this.district = street.properties.DISTRICT;
+            this.fNodeCnn = street.properties.F_NODE_CNN;
+            this.jurisdicti = street.properties.JURISDICTI;
+            this.layer = street.properties.LAYER;
+            this.lfFadd = street.properties.LF_FADD;
+            this.lfToadd = street.properties.LF_TOADD;
+            this.nhood = street.properties.NHOOD;
+            this.rtFadd = street.properties.RT_FADD;
+            this.rtToadd = street.properties.RT_TOADD;
+            this.street = street.properties.STREET;
+            this.streetname = street.properties.STREETNAME;
+            this.streetGc = street.properties.STREET_GC;
+            this.stType = street.properties.ST_TYPE;
+            this.tNodeCnn = street.properties.T_NODE_CNN;
+            this.zipCode = street.properties.ZIP_CODE;
 
-        this.groups = [];
+            this.groups = [];
 
-        this.setPath(street.geometry.coordinates);
-        this.neighborhood = Store.get('neighborhood', this.nhood);
-    }
+            this.setPath(street.geometry.coordinates);
+            this.neighborhood = Store.get('neighborhood', this.nhood);
+        }
 
-    Street.prototype.setPath = function (coordinates) {
-        var lats = [];
-        var lons = [];
-        var dists = [];
-        var lastPoint;
+        Street.prototype.setPath = function (coordinates) {
+            var self = this;
+            var lats = [];
+            var lons = [];
+            var dists = [];
+            var lastItem;
 
-        this.path = coordinates.map(function (cord) {
-            var path = {point: Point.fromArray(cord)};
+            this.path = coordinates.map(function (cord) {
+                var item = {
+                    point: Point.fromArray(cord),
+                    node: undefined
+                };
+                var dist;
 
-            lats.push(path.point.lat);
-            lons.push(path.point.lon);
-            if (lastPoint) {
-                dists.push(lastPoint.distance(path.point));
-            }
-            lastPoint = path.point;
+                item.node = PointGraph.get(item.point);
+                item.node.addStreet(self);
 
-            return path;
-        });
+                lats.push(item.point.lat);
+                lons.push(item.point.lon);
 
-        this.minPoint = new Point(d3.min(lons), d3.min(lats));
-        this.maxPoint = new Point(d3.max(lons), d3.max(lats));
-        this.maxDist = d3.max(dists);
+                if (lastItem) {
+                    dist = lastItem.point.distance(item.point);
 
-        this.setMaxMinPoints();
-    };
+                    item.node.addNeighbors(lastItem.node, dist);
+                    lastItem.node.addNeighbors(item.node, dist);
 
+                    dists.push(lastItem.point.distance(item.point));
+                }
+                lastItem = item;
 
-    Street.prototype.setMaxMinPoints = function () {
-        var minPoint = Store.get('streetPoint', 'min') ||
-                Store.register('streetPoint', 'min', this.minPoint.clone());
-        var maxPoint = Store.get('streetPoint', 'max') ||
-                Store.register('streetPoint', 'max', this.maxPoint.clone());
+                return item;
+            });
 
-        // update min
-        minPoint.lat = this.minPoint.lat < minPoint.lat ? this.minPoint.lat : minPoint.lat;
-        minPoint.lon = this.minPoint.lon < minPoint.lon ? this.minPoint.lon : minPoint.lon;
-        // update max
-        maxPoint.lat = this.maxPoint.lat > maxPoint.lat ? this.maxPoint.lat : maxPoint.lat;
-        maxPoint.lon = this.maxPoint.lon > maxPoint.lon ? this.maxPoint.lon : maxPoint.lon;
-    };
+            this.minPoint = new Point(d3.min(lons), d3.min(lats));
+            this.maxPoint = new Point(d3.max(lons), d3.max(lats));
+            this.maxDist = d3.max(dists);
+
+            this.setMaxMinPoints();
+        };
 
 
-    return Street;
-}]);
+        Street.prototype.setMaxMinPoints = function () {
+            var minPoint = Store.get('streetPoint', 'min') ||
+                    Store.register('streetPoint', 'min', this.minPoint.clone());
+            var maxPoint = Store.get('streetPoint', 'max') ||
+                    Store.register('streetPoint', 'max', this.maxPoint.clone());
+
+            // update min
+            minPoint.lat = this.minPoint.lat < minPoint.lat ? this.minPoint.lat : minPoint.lat;
+            minPoint.lon = this.minPoint.lon < minPoint.lon ? this.minPoint.lon : minPoint.lon;
+            // update max
+            maxPoint.lat = this.maxPoint.lat > maxPoint.lat ? this.maxPoint.lat : maxPoint.lat;
+            maxPoint.lon = this.maxPoint.lon > maxPoint.lon ? this.maxPoint.lon : maxPoint.lon;
+        };
+
+        return Street;
+    }]);
 
 angular.module('BUSzinga').factory('Neighborhood', ['Point', 'Store', function (Point, Store) {
     'use strict';
@@ -253,3 +268,29 @@ angular.module('BUSzinga').factory('StreetGroup', ['Point', function (Point) {
 
     return StreetGroup;
 }]);
+
+angular.module('BUSzinga').factory('GraphNode', function () {
+    'use strict';
+    function GraphNode(point) {
+        this.point = point;
+
+        this.neighbors = [];
+
+        this.streets = [];
+    }
+
+    GraphNode.prototype.addNeighbors = function (node, dist) {
+        this.neighbors.push({
+            node: node,
+            distance: dist
+        });
+    };
+
+    GraphNode.prototype.addStreet = function (street) {
+        if (this.streets.indexOf(street) === -1) {
+            this.streets.push(street);
+        }
+    };
+
+    return GraphNode;
+});
