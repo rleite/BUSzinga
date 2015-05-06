@@ -44,11 +44,11 @@ angular.module('BUSzinga')
                 var translateX = (width * 0.5) + centerX - scaledRadios;
                 var translateY = (height * 0.5) + centerY - scaledRadios;
 
-                DrawToolkit.wrapAnimation(map, animate && scaleAnimation)
-                    .attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
+                // DrawToolkit.wrapAnimation(map, animate && scaleAnimation)
+                //     .attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
 
-                DrawToolkit.wrapAnimation(mapBoard, animate && scaleAnimation)
-                    .attr('transform', 'scale(' + scale + ')');
+                // DrawToolkit.wrapAnimation(mapBoard, animate && scaleAnimation)
+                //     .attr('transform', 'scale(' + scale + ')');
 
                 $scope.$broadcast('rlMap.applyScaleAndCenter');
             }
@@ -56,6 +56,16 @@ angular.module('BUSzinga')
             function getScalers(limit) {
                 var minPoint = mapCtrl.minPoint;
                 var maxPoint = mapCtrl.maxPoint;
+                var halfLat = (maxPoint.lat - minPoint.lat) / 2;
+                var halfLon = (maxPoint.lon - minPoint.lon) / 2;
+
+                var scale = 0.5;
+                var projection = d3.geo.mercator()
+                    .center([halfLon, halfLat])
+                    .scale((limit + 1) / 2 / Math.PI)
+                    .translate([limit * 0.5, limit * 0.5]);
+
+
                 var xD3Scale = d3.scale.linear()
                     .domain([minPoint.lon, maxPoint.lon])
                     .range([0, limit]);
@@ -66,11 +76,11 @@ angular.module('BUSzinga')
 
                 return {
                     xScale: function (d) {
-                        return xD3Scale(d.point.lon);
+                        return projection([d.point.lon, d.point.lat])[0];
                     },
 
                     yScale: function (d) {
-                        return yD3Scale(d.point.lat);
+                        return projection([d.point.lon, d.point.lat])[1];
                     }
                 };
             }
@@ -104,7 +114,7 @@ angular.module('BUSzinga')
 
             function reDraw(animateScale) {
 
-                var drawRacio = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
+                var drawRacio = 1;
 
                 // vehicles
                 var vehiclesSelector = drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
@@ -169,6 +179,8 @@ angular.module('BUSzinga')
                     }).style('stroke-width', function () {
                         return drawRacio * 2;
                     });
+
+                console.log('REDER');
             }
 
             function setUpControls() {
@@ -204,6 +216,7 @@ angular.module('BUSzinga')
                         applyScaleAndCenter();
                     }
                 });
+
 
             }
 
