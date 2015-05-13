@@ -1,6 +1,4 @@
 {
-  "name": "buszinga",
-  "description": "Bus track of san francisco Buses.",
   "dependencies": {
     "grunt": "^0.4.5",
     "grunt-contrib-connect": "^0.9.0",
