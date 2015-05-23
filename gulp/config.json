@@ -1,0 +1,19 @@
+{
+  "server": {
+    "port": 8080,
+    "host": "rleite.local"
+  },
+  "patthers": {
+    "scripts": {
+      "js": "app/**/*.js",
+      "ts": "app/**/*.ts"
+    },
+    "styles": {
+      "css": "app/**/*.css",
+      "scss": "app/**/*.scss"
+    },
+    "markup": {
+      "html": "app/**/*.html"
+    }
+  }
+}
