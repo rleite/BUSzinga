@@ -44,35 +44,27 @@ angular.module('BUSzinga')
                 var translateX = (width * 0.5) + centerX - scaledRadios;
                 var translateY = (height * 0.5) + centerY - scaledRadios;
 
-                // DrawToolkit.wrapAnimation(map, animate && scaleAnimation)
-                //     .attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
+                DrawToolkit.wrapAnimation(map, animate && scaleAnimation)
+                    .attr('transform', 'translate(' + translateX + ', ' + translateY + ')');
 
-                // DrawToolkit.wrapAnimation(mapBoard, animate && scaleAnimation)
-                //     .attr('transform', 'scale(' + scale + ')');
+                DrawToolkit.wrapAnimation(mapBoard, animate && scaleAnimation)
+                    .attr('transform', 'scale(' + scale + ')');
 
                 $scope.$broadcast('rlMap.applyScaleAndCenter');
             }
 
             function getScalers(limit) {
+
                 var minPoint = mapCtrl.minPoint;
                 var maxPoint = mapCtrl.maxPoint;
-                var halfLat = (maxPoint.lat - minPoint.lat) / 2;
-                var halfLon = (maxPoint.lon - minPoint.lon) / 2;
+                var halfLat = minPoint.lat + (maxPoint.lat - minPoint.lat) / 2;
+                var halfLon = minPoint.lon + (maxPoint.lon - minPoint.lon) / 2;
 
-                var scale = 0.5;
                 var projection = d3.geo.mercator()
+                    .scale(7000000)
+                    .translate([limit * .5, limit * .5])
                     .center([halfLon, halfLat])
-                    .scale((limit + 1) / 2 / Math.PI)
-                    .translate([limit * 0.5, limit * 0.5]);
-
-
-                var xD3Scale = d3.scale.linear()
-                    .domain([minPoint.lon, maxPoint.lon])
-                    .range([0, limit]);
-
-                var yD3Scale = d3.scale.linear()
-                    .domain([minPoint.lat, maxPoint.lat])
-                    .range([limit, 0]);
+                    .precision(.1);
 
                 return {
                     xScale: function (d) {
@@ -89,6 +81,7 @@ angular.module('BUSzinga')
                 var neighborhoodColorScale = d3.scale.linear()
                     .domain([0, mapCtrl.neighborhoods.length - 1])
                     .range(['#FFFFFF', '#E8E8E8']);
+
                 var neighborhoods = mapCtrl.neighborhoods.map(function (neighborhood) {
                     return neighborhood.edges;
                 }).reduce(function (ra, rb) {
@@ -114,7 +107,7 @@ angular.module('BUSzinga')
 
             function reDraw(animateScale) {
 
-                var drawRacio = 1;
+                var drawRacio = mapCtrl.drawMax / mapCtrl.zoomScaler(mapCtrl.zoom);
 
                 // vehicles
                 var vehiclesSelector = drawToolkit.drawCircles(mapCtrl.vehicles, 'vehicle', {
@@ -180,7 +173,6 @@ angular.module('BUSzinga')
                         return drawRacio * 2;
                     });
 
-                console.log('REDER');
             }
 
             function setUpControls() {
@@ -229,7 +221,6 @@ angular.module('BUSzinga')
                 drawToolkit = new DrawToolkit(mapBoard, getScalers(mapCtrl.drawMax));
 
                 updateDimentions();
-
 
                 mapCtrl.init(drawBackground, reDraw);
                 applyScaleAndCenter();

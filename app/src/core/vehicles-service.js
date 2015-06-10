@@ -88,7 +88,7 @@ angular.module('BUSzinga').factory('VehiclesService', [
                     return new Vehicle(vehicle);
                 });
                 
-                // streetVehicleInterpolation();
+                streetVehicleInterpolation();
 
                 return vehicles;
             }).then(function (vehicles) {
