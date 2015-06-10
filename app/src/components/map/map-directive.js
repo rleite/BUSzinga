@@ -54,23 +54,25 @@ angular.module('BUSzinga')
             }
 
             function getScalers(limit) {
+
                 var minPoint = mapCtrl.minPoint;
                 var maxPoint = mapCtrl.maxPoint;
-                var xD3Scale = d3.scale.linear()
-                    .domain([minPoint.lon, maxPoint.lon])
-                    .range([0, limit]);
+                var halfLat = minPoint.lat + (maxPoint.lat - minPoint.lat) / 2;
+                var halfLon = minPoint.lon + (maxPoint.lon - minPoint.lon) / 2;
 
-                var yD3Scale = d3.scale.linear()
-                    .domain([minPoint.lat, maxPoint.lat])
-                    .range([limit, 0]);
+                var projection = d3.geo.mercator()
+                    .scale(7000000)
+                    .translate([limit * .5, limit * .5])
+                    .center([halfLon, halfLat])
+                    .precision(.1);
 
                 return {
                     xScale: function (d) {
-                        return xD3Scale(d.point.lon);
+                        return projection([d.point.lon, d.point.lat])[0];
                     },
 
                     yScale: function (d) {
-                        return yD3Scale(d.point.lat);
+                        return projection([d.point.lon, d.point.lat])[1];
                     }
                 };
             }
@@ -79,6 +81,7 @@ angular.module('BUSzinga')
                 var neighborhoodColorScale = d3.scale.linear()
                     .domain([0, mapCtrl.neighborhoods.length - 1])
                     .range(['#FFFFFF', '#E8E8E8']);
+
                 var neighborhoods = mapCtrl.neighborhoods.map(function (neighborhood) {
                     return neighborhood.edges;
                 }).reduce(function (ra, rb) {
@@ -169,6 +172,7 @@ angular.module('BUSzinga')
                     }).style('stroke-width', function () {
                         return drawRacio * 2;
                     });
+
             }
 
             function setUpControls() {
@@ -205,6 +209,7 @@ angular.module('BUSzinga')
                     }
                 });
 
+
             }
 
             function init() {
@@ -216,7 +221,6 @@ angular.module('BUSzinga')
                 drawToolkit = new DrawToolkit(mapBoard, getScalers(mapCtrl.drawMax));
 
                 updateDimentions();
-
 
                 mapCtrl.init(drawBackground, reDraw);
                 applyScaleAndCenter();

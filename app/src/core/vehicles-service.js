@@ -87,7 +87,9 @@ angular.module('BUSzinga').factory('VehiclesService', [
                 vehicles = vehiclesData.map(function (vehicle) {
                     return new Vehicle(vehicle);
                 });
+                
                 streetVehicleInterpolation();
+
                 return vehicles;
             }).then(function (vehicles) {
                 return filterByRoute(vehicles, routes);
